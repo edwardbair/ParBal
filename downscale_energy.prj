@@ -1,0 +1,225 @@
+<deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
+  <configuration file="/home/nbair/Dropbox/reconstruction_working/code/downscale_energy.prj" location="/home/nbair/Dropbox/reconstruction_working/code" name="downscale_energy" target="target.ezdeploy.standalone" target-name="Application Compiler">
+    <param.appname>downscale_energy</param.appname>
+    <param.icon />
+    <param.icons />
+    <param.version>1.0</param.version>
+    <param.authnamewatermark />
+    <param.email />
+    <param.company />
+    <param.summary />
+    <param.description />
+    <param.screenshot />
+    <param.guid />
+    <param.installpath.string>/downscale_energy/</param.installpath.string>
+    <param.installpath.combo>option.installpath.user</param.installpath.combo>
+    <param.logo />
+    <param.install.notes>In the following directions, replace MCR_ROOT by the directory where the MATLAB Runtime is installed on the target machine.
+
+(1) Set the environment variable XAPPLRESDIR to this value:
+
+    MCR_ROOT/v91/X11/app-defaults
+
+
+(2) If the environment variable LD_LIBRARY_PATH is undefined, set it to the concatenation of the following strings:
+
+    MCR_ROOT/v91/runtime/glnxa64:
+    MCR_ROOT/v91/bin/glnxa64:
+    MCR_ROOT/v91/sys/os/glnxa64:
+    MCR_ROOT/v91/sys/opengl/lib/glnxa64
+
+    If it is defined, set it to the concatenation of these strings:
+
+    ${LD_LIBRARY_PATH}: 
+    MCR_ROOT/v91/runtime/glnxa64:
+    MCR_ROOT/v91/bin/glnxa64:
+    MCR_ROOT/v91/sys/os/glnxa64:
+    MCR_ROOT/v91/sys/opengl/lib/glnxa64</param.install.notes>
+    <param.target.install.notes />
+    <param.intermediate>${PROJECT_ROOT}/downscale_energy/for_testing</param.intermediate>
+    <param.files.only>${PROJECT_ROOT}/downscale_energy/for_redistribution_files_only</param.files.only>
+    <param.output>${PROJECT_ROOT}/downscale_energy/for_redistribution</param.output>
+    <param.logdir>${PROJECT_ROOT}/downscale_energy</param.logdir>
+    <param.enable.clean.build>false</param.enable.clean.build>
+    <param.user.defined.mcr.options />
+    <param.embed.ctf>true</param.embed.ctf>
+    <param.target.type>subtarget.standalone</param.target.type>
+    <param.support.packages />
+    <param.web.mcr>true</param.web.mcr>
+    <param.package.mcr>false</param.package.mcr>
+    <param.no.mcr>false</param.no.mcr>
+    <param.web.mcr.name>MyAppInstaller_web</param.web.mcr.name>
+    <param.package.mcr.name>MyAppInstaller_mcr</param.package.mcr.name>
+    <param.no.mcr.name>MyAppInstaller_app</param.no.mcr.name>
+    <param.windows.command.prompt>false</param.windows.command.prompt>
+    <param.create.log>false</param.create.log>
+    <param.log.file />
+    <unset>
+      <param.icon />
+      <param.icons />
+      <param.version />
+      <param.authnamewatermark />
+      <param.email />
+      <param.company />
+      <param.summary />
+      <param.description />
+      <param.screenshot />
+      <param.guid />
+      <param.installpath.string />
+      <param.installpath.combo />
+      <param.logo />
+      <param.target.install.notes />
+      <param.intermediate />
+      <param.files.only />
+      <param.output />
+      <param.logdir />
+      <param.enable.clean.build />
+      <param.user.defined.mcr.options />
+      <param.embed.ctf />
+      <param.target.type />
+      <param.support.packages />
+      <param.web.mcr />
+      <param.package.mcr />
+      <param.no.mcr />
+      <param.web.mcr.name />
+      <param.package.mcr.name />
+      <param.no.mcr.name />
+      <param.windows.command.prompt />
+      <param.create.log />
+      <param.log.file />
+    </unset>
+    <fileset.main>
+      <file>${PROJECT_ROOT}/downscale_energy.m</file>
+    </fileset.main>
+    <fileset.resources />
+    <fileset.package />
+    <fileset.depfun>
+      <file>${PROJECT_ROOT}/BDS_unpack_mex5.mexa64</file>
+      <file>${PROJECT_ROOT}/Ephem_coefficients.mat</file>
+      <file>${PROJECT_ROOT}/Ephemeris.m</file>
+      <file>${PROJECT_ROOT}/GetCoordinateInfo.m</file>
+      <file>${PROJECT_ROOT}/GetEndmember.m</file>
+      <file>${PROJECT_ROOT}/GetHorizon.m</file>
+      <file>${PROJECT_ROOT}/GetTopography.m</file>
+      <file>${PROJECT_ROOT}/Get_Parameter.m</file>
+      <file>${PROJECT_ROOT}/NedFileShare.m</file>
+      <file>${PROJECT_ROOT}/Remap_Parameter_Table.m</file>
+      <file>${PROJECT_ROOT}/SaturationVaporPressure.m</file>
+      <file>${PROJECT_ROOT}/Set_Parameter_Table.m</file>
+      <file>${PROJECT_ROOT}/StartAzureDiary.m</file>
+      <file>${PROJECT_ROOT}/TopoSunAngle.m</file>
+      <file>${PROJECT_ROOT}/bitshift2.m</file>
+      <file>${PROJECT_ROOT}/bitshift3.m</file>
+      <file>${PROJECT_ROOT}/broadbandSnowAlbedo.m</file>
+      <file>${PROJECT_ROOT}/curvature.m</file>
+      <file>${PROJECT_ROOT}/d_ebalance.m</file>
+      <file>${PROJECT_ROOT}/d_ebalance_debris.m</file>
+      <file>${PROJECT_ROOT}/dailyEnergy.m</file>
+      <file>${PROJECT_ROOT}/daily_melt.m</file>
+      <file>${PROJECT_ROOT}/datenum2iso.m</file>
+      <file>${PROJECT_ROOT}/diffuseAtElevation_modis.m</file>
+      <file>${PROJECT_ROOT}/downscaleDewpoint.m</file>
+      <file>${PROJECT_ROOT}/downscaleShortwave.m</file>
+      <file>${PROJECT_ROOT}/ebalance.m</file>
+      <file>${PROJECT_ROOT}/elevationPressure.m</file>
+      <file>${PROJECT_ROOT}/extract_grib.m</file>
+      <file>${PROJECT_ROOT}/findMODISh5group.m</file>
+      <file>${PROJECT_ROOT}/find_grib_marker.m</file>
+      <file>${PROJECT_ROOT}/fracUnAbsExoAtmo.m</file>
+      <file>${PROJECT_ROOT}/get_bds.m</file>
+      <file>${PROJECT_ROOT}/get_bms.m</file>
+      <file>${PROJECT_ROOT}/get_gds.m</file>
+      <file>${PROJECT_ROOT}/get_pds.m</file>
+      <file>${PROJECT_ROOT}/ibm2flt.m</file>
+      <file>${PROJECT_ROOT}/ice_vapor_pressure.m</file>
+      <file>${PROJECT_ROOT}/identifyFolders.m</file>
+      <file>${PROJECT_ROOT}/include_vars_melt.m</file>
+      <file>${PROJECT_ROOT}/int2.m</file>
+      <file>${PROJECT_ROOT}/int3.m</file>
+      <file>${PROJECT_ROOT}/interpGLDAS2hourly.m</file>
+      <file>${PROJECT_ROOT}/is_grib_file.m</file>
+      <file>${PROJECT_ROOT}/iso2datenum.m</file>
+      <file>${PROJECT_ROOT}/kasten.m</file>
+      <file>${PROJECT_ROOT}/lapseLongWave.m</file>
+      <file>${PROJECT_ROOT}/levels.m</file>
+      <file>${PROJECT_ROOT}/load_coarse_topo.m</file>
+      <file>${PROJECT_ROOT}/makeFOREST.m</file>
+      <file>${PROJECT_ROOT}/makeInterp.m</file>
+      <file>${PROJECT_ROOT}/make_lai.m</file>
+      <file>${PROJECT_ROOT}/make_ldas_filelist.m</file>
+      <file>${PROJECT_ROOT}/newton_raphson_ebalance.m</file>
+      <file>${PROJECT_ROOT}/partitionGlobalErbs1982.m</file>
+      <file>${PROJECT_ROOT}/read_LDAS.m</file>
+      <file>${PROJECT_ROOT}/read_ceres.m</file>
+      <file>${PROJECT_ROOT}/read_grib.m</file>
+      <file>${PROJECT_ROOT}/read_grib2.m</file>
+      <file>${PROJECT_ROOT}/refracted.m</file>
+      <file>${PROJECT_ROOT}/reprojectRaster.m</file>
+      <file>${PROJECT_ROOT}/run_ebalance.m</file>
+      <file>${PROJECT_ROOT}/solve_debris_depth.m</file>
+      <file>${PROJECT_ROOT}/solve_ebalance.m</file>
+      <file>${PROJECT_ROOT}/stackGLDAS.m</file>
+      <file>${PROJECT_ROOT}/subsetGLDAS.m</file>
+      <file>${PROJECT_ROOT}/sunang2.m</file>
+      <file>${PROJECT_ROOT}/sunslope.m</file>
+      <file>${PROJECT_ROOT}/table0.m</file>
+      <file>${PROJECT_ROOT}/table1.m</file>
+      <file>${PROJECT_ROOT}/table3a.m</file>
+      <file>${PROJECT_ROOT}/table4.m</file>
+      <file>${PROJECT_ROOT}/table5.m</file>
+      <file>${PROJECT_ROOT}/table6.m</file>
+      <file>${PROJECT_ROOT}/topo_winds.m</file>
+    </fileset.depfun>
+    <build-deliverables>
+      <file location="${PROJECT_ROOT}/downscale_energy/for_testing" name="downscale_energy" optional="false">/home/nbair/Dropbox/reconstruction_working/code/downscale_energy/for_testing/downscale_energy</file>
+      <file location="${PROJECT_ROOT}/downscale_energy/for_testing" name="readme.txt" optional="true">/home/nbair/Dropbox/reconstruction_working/code/downscale_energy/for_testing/readme.txt</file>
+      <file location="${PROJECT_ROOT}/downscale_energy/for_testing" name="splash.png" optional="false">/home/nbair/Dropbox/reconstruction_working/code/downscale_energy/for_testing/splash.png</file>
+      <file location="${PROJECT_ROOT}/downscale_energy/for_testing" name="run_downscale_energy.sh" optional="false">/home/nbair/Dropbox/reconstruction_working/code/downscale_energy/for_testing/run_downscale_energy.sh</file>
+    </build-deliverables>
+    <workflow />
+    <matlab>
+      <root>/sw/MatLab/R2016b</root>
+      <toolboxes>
+        <toolbox name="fixedpoint" />
+        <toolbox name="matlabcoder" />
+        <toolbox name="matlabhdlcoder" />
+        <toolbox name="embeddedcoder" />
+      </toolboxes>
+      <toolbox>
+        <fixedpoint>
+          <enabled>true</enabled>
+        </fixedpoint>
+      </toolbox>
+      <toolbox>
+        <matlabcoder>
+          <enabled>true</enabled>
+        </matlabcoder>
+      </toolbox>
+      <toolbox>
+        <matlabhdlcoder>
+          <enabled>true</enabled>
+        </matlabhdlcoder>
+      </toolbox>
+      <toolbox>
+        <embeddedcoder>
+          <enabled>true</enabled>
+        </embeddedcoder>
+      </toolbox>
+    </matlab>
+    <platform>
+      <unix>true</unix>
+      <mac>false</mac>
+      <windows>false</windows>
+      <win2k>false</win2k>
+      <winxp>false</winxp>
+      <vista>false</vista>
+      <linux>true</linux>
+      <solaris>false</solaris>
+      <osver>2.6.32-220.el6.x86_64</osver>
+      <os32>false</os32>
+      <os64>true</os64>
+      <arch>glnxa64</arch>
+      <matlab>true</matlab>
+    </platform>
+  </configuration>
+</deployment-project>
