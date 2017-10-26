@@ -80,6 +80,7 @@ G=NaN(size(Lin_coarse),'single');
 
 normalflag=false;
 ddflag=false;
+
 %debris case
 z_0=z_0d;
 Tsfc=NaN(size(Lin_coarse),'single');
@@ -130,7 +131,7 @@ opt_out=NaN(size(Lin_coarse),'single');
                     rho_air,De_h,B1,B2,Kd,mode,tau,cc,ebalance_opt_arg);
                 %use that Tsfc to calculate ebalance
                 Tsfc = y;
-                if normalflag && y > Tf
+                if normalflag && y > Tf %don't adjust Tsfc for debris
                     Tsfc=Tf; %snow temp can't be greater than freezing
                 end
                 %note Tf as input since M is + for y > Tsfc and - for y < Tsfc

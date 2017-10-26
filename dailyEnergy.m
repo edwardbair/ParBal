@@ -145,13 +145,17 @@ case 'normal'
     x(x<0)=0;
     out.M=sum(x,3);
 case 'debris'
-    out.Tsfc=mean(Tsfc,3); 
-    %Assume Kd = 1 W/(m*K)
+    out.Tsfc=Tsfc; 
+    %Assume Kd = 1 W/(m*K) and 1/2 of debris depth to 0 deg debris temp
     out.G=(Tsfc-273.15)./(0.5.*d);
 case 'debris depth'
-    out.Tsfc=mean(Tsfc,3); 
-    out.d=opt_output*1000; %convert to mm
+    out.Tsfc=Tsfc;
+    out.d=opt_output; %depth in m
     out.G=(Tsfc-273.15)./(0.5.*out.d);
+    out.d=out.d*1000; %convert to mm
+    %for both of these, G should be summed and multipled by 0.0108 mm / W
+    %m^-2 hr or averaged and multipled by 0.2592 mm/ W m^-2 to damp out
+    %diurnal Tsfc swings
 end
     
 %save
