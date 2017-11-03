@@ -1,6 +1,6 @@
 function LDAS = read_LDAS(v,filename)
 %LDAS = read_LDAS(v,filename)
-% Read variable from GRIB NLDAS or GLDAS,requires read_grib package
+% Read variable from NLDAS or GLDAS,requires read_grib package for NLDAS
 % List variables in NLDAS or GLDAS: grib_struct=read_grib(filename,'inv')
 %INPUT
 % v - character array describing variable (see list of variables below)
@@ -27,41 +27,63 @@ function LDAS = read_LDAS(v,filename)
 % 10 - APCP   kg/m^2  Accumulation  surface              Total precipitation 
 % 11 - DSWRF  W/m^2   Valid at P1   surface              Downward short wave flux
 
-%GLDAS
-% Average - 3hr average 
-% Rec  Name   Units  Quantity     Level        Description
-% -------------------------------------------------------------------------
-% 1  - NSWRS  W/m^2  Average      surface      Net short wave (surface) 
-% 2  - NLWRS  W/m^2  Average      surface      Net long wave (surface) 
-% 3  - LHTFL  W/m^2  Average      surface      Latent heat flux 
-% 4  - SHTFL  W/m^2  Average      surface      Sensible heat flux 
-% 5  - GFLUX  W/m^2  Average      surface      Ground heat flux 
-% 6  - LFTX   K      Valid at P1  surface      Surface lifted index 
-% 7  - 4LFTX  K      Valid at P1  surface      Best (4-layer) lifted index 
-% 8  - EVP    kg/m^2 Valid at P1  surface      Evaporation 
-% 9  - SSRUN  kg/m^2 Valid at P1  surface      Storm surface runoff 
-% 10 - BGRUN  kg/m^2 Valid at P1  surface      Baseflow-groundwater runoff 
-% 11 - SNOM   kg/m^2 Average      surface      Snow melt 
-% 12 - BVF2   1/s^2  Valid at P1  surface      Brunt-Vaisala frequency^2 
-% 13 - WEASD  kg/m^2 Valid at P1  surface      Accum. snow 
-% 14 - TSOIL  K      Valid at P1  0-4 cm down  Soil temp. 
-% 15 - TSOIL  K      Valid at P1  0-3 cm down  Soil temp. 
-% 16 - TSOIL  K      Valid at P1  0-2 cm down  Soil temp. 
-% 17 - TSOIL  K      Valid at P1  0-1 cm down  Soil temp. 
-% 18 - SOILM  kg/m^2 Valid at P1  0-4 cm down  Soil moisture content 
-% 19 - SOILM  kg/m^2 Valid at P1  0-3 cm down  Soil moisture content 
-% 20 - SOILM  kg/m^2 Valid at P1  0-2 cm down  Soil moisture content 
-% 21 - SOILM  kg/m^2 Valid at P1  0-1 cm down  Soil moisture content 
-% 22 - TCDC   %      Valid at P1  surface      Total cloud cover 
-% 23 - WIND   m/s    Valid at P1  surface      Wind speed 
-% 24 - TMP    K      Valid at P1  surface      Temp. 
-% 25 - SPFH   kg/kg  Valid at P1  surface      Specific humidity 
-% 26 - PRES   Pa     Valid at P1  surface      Pressure 
-% 27 - DSWRF  W/m^2  Average      surface      Downward short wave flux 
-% 28 - DLWRF  W/m^2  Average      surface      Downward long wave flux
+% GLAS, description for netCDF4 format
+% Short Name Description Unit
+% Swnet_tavg Net short wave radiation flux W m-2
+% Lwnet_tavg Net long-wave radiation flux W m-2
+% Qle_tavg Latent heat net flux W m-2
+% Qh_tavg Sensible heat net flux W m-2
+% Qg_tavg Heat flux W m-2
+% Snowf_tavg Snow precipitation rate kg m-2 s-1
+% Rainf_tavg Rain precipitation rate kg m-2 s-1
+% Evap_tavg Evapotranspiration kg m-2 s-1
+% Qs_acc Storm surface runoff kg m-2
+% Qsb_acc Baseflow-groundwater runoff kg m-2
+% Qsm_acc Snow melt kg m-2
+% AvgSurfT_inst Average Surface Skin temperature K
+% Albedo_inst Albedo %
+% SWE_inst Snow depth water equivalent kg m-2
+% SnowDepth_inst Snow depth m
+% SoilMoi0_10cm_inst Soil moisture kg m-2
+% SoilMoi10_40cm_inst Soil moisture kg m-2
+% SoilMoi40_100cm_inst Soil moisture kg m-2
+% SoilMoi100_200cm_inst Soil moisture kg m-2
+% SoilTMP0_10cm_inst Soil temperature K
+% SoilTMP10_40cm_inst Soil temperature K
+% SoilTMP40_100cm_inst Soil temperature K
+% SoilTMP100_200cm_inst Soil temperature K
+% PotEvap_tavg Potential evaporation rate W m-2
+% ECanop_tavg Canopy water evaporation W m-2
+% Tveg_tavg Transpiration W m-2
+% ESoil_tavg Direct Evaporation from Bare Soil W m-2
+% RootMoist_inst Root zone soil moisture kg m-2
+% CanopInt_inst Plant canopy surface water kg m-2
+% Wind_f_inst Wind speed m/s
+% Rainf_f_tavg Total precipitation rate kg m-2 s-1
+% Tair_f_inst Temperature K
+% Qair_f_inst Specific humidity kg/kg
+% Psurf_f_inst Pressure Pa
+% SWdown_f_tavg Downward short-wave radiation flux W m-2
+% LWdown_f_tavg Downward long-wave radiation flux W m-2
+% 
+% The short names with extension “_tavg” are past 3-hr averaged variables.
+% The short names with extension “_acc” are past 3-hr accumulated variables.
+% The short names with extension “_inst” are instantaneous variables.
+% The short names with “_f” are forcing variables.
+
+
+nldas_flag=false;
+gldas_flag=false;
+
+if contains(filename,'NLDAS')
+    nldas_flag=true;
+elseif contains(filename,'GLDAS')
+    gldas_flag=true;
+end
 
 %Read file
-grib_struct=read_grib(filename,{v});
+if nldas_flag
+    grib_struct=read_grib(filename,{v});
 if isempty(grib_struct)
     error('empty grib for file:%s variable: %s',filename,v);
 end
@@ -71,30 +93,18 @@ Ni=gds.Ni;
 Nj=gds.Nj;
 Di=gds.Di;
 Dj=gds.Dj;
-
-% Check filename to determine if NLDAS or GLDAS, adjust NLDAS Rmap
-if ~isempty(strfind(filename,'NLDAS'));
-    % Make referencing matrix for NLDAS, it appears rounded so adjust
-    %http://www.emc.ncep.noaa.gov/mmb/nldas/LDAS8th/LDASspecs/LDASspecs.shtml
-    %LDASconus.Rmap = makerefmat(-124.9375,52.9375, Dj, -Di);
-    LDAS.Rmap = makerefmat(gds.Lo1+0.0005,gds.La2-0.0005, Dj, -Di);
-elseif  ~isempty(strfind(filename,'GLDAS'));
-    LDAS.Rmap = makerefmat(gds.Lo1,gds.La2, Dj, -Di);
-    %http://ldas.gsfc.nasa.gov/gldas/data/0.25deg/lis_elev.ctl
-    % -179.875 0.25; -59.875 0.25 (left,lower)
-end
-
+% Make referencing matrix for NLDAS, it appears rounded so adjust
+%http://www.emc.ncep.noaa.gov/mmb/nldas/LDAS8th/LDASspecs/LDASspecs.shtml
+%LDASconus.Rmap = makerefmat(-124.9375,52.9375, Dj, -Di);
+Rmap = makerefmat(gds.Lo1+0.0005,gds.La2-0.0005, Dj, -Di);
 %Reshape,rotate, and scale matrix
 dt=rot90(reshape(grib_struct.fltarray,[Ni Nj]));
-
+matrix=dt;
 %9.9990e+20 is commonly the no data value but does not appear anywhere
 max_dt=max(max(dt));
 if max_dt>0
     dt(dt==max_dt)=NaN;
 end
-
-%Fill date cube with all x,y, for each hour
-LDAS.matrix=dt;
 
 %Universal Time
 pds=grib_struct.pds;
@@ -111,8 +121,36 @@ yr=str2double([sprintf('%02s',num2str(y1)) ...
     sprintf('%02s',num2str(pds.year))]);
 
 % Add datevals to output structure
-LDAS.dateval=datenum([yr pds.month pds.day pds.hour pds.min 0]);
+dateval=datenum([yr pds.month pds.day pds.hour pds.min 0]);
+units=grib_struct.units;
 
-% Add units to output structure
-LDAS.units=grib_struct.units;
+elseif  gldas_flag
+    ncid = netcdf.open(filename);
+    varid = netcdf.inqVarID(ncid,v);
+    x=netcdf.getVar(ncid,varid);
+    x=rot90(x);
+    nullval=-9999;
+    x(x==nullval)=NaN;
+    matrix=x;
+    units=netcdf.getAtt(ncid,varid,'units');
+    varid = netcdf.inqVarID(ncid,'lat');
+    lat=netcdf.getVar(ncid,varid);
+    varid = netcdf.inqVarID(ncid,'lon');
+    lon=netcdf.getVar(ncid,varid);
+    Rmap = makerefmat(double(lon(1)),double(lat(end)),double(lon(2)-lon(1)),...
+        double(lat(1)-lat(2)));
+    %http://ldas.gsfc.nasa.gov/gldas/data/0.25deg/lis_elev.ctl
+    % -179.875 0.25; 59.875 -0.25 (starting from upper left corner)
+    varid=netcdf.inqVarID(ncid,'time');
+    bd=netcdf.getAtt(ncid,varid,'begin_date');
+    bt=netcdf.getAtt(ncid,varid,'begin_time');
+    dateval=datenum([bd,bt],'yyyymmddHHMMSS');
+    netcdf.close(ncid);
+end
+
+LDAS.matrix=matrix;
+LDAS.dateval=dateval;
+LDAS.units=units;
+LDAS.Rmap=Rmap;
+
 LDAS=orderfields(LDAS);

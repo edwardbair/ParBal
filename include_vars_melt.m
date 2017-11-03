@@ -104,13 +104,17 @@ ldas=make_ldas_filelist(dateval,ldas_dir,tz);
 if contains(ldas_dem_dir,'NLDAS')
     ldas.vars ={'TMP','PRES','UGRD','VGRD','SPFH'};
 elseif contains(ldas_dem_dir,'GLDAS')
-    ldas.vars ={'TMP','PRES','WIND','SPFH'};
+%     ldas.vars ={'TMP','PRES','WIND','SPFH'};
+ldas.var={'Tair_f_inst','Psurf_f_inst',...
+    'Wind_f_inst','Qair_f_inst'};
 end
 
 ldas_topo_names={'Z','aspect','slope'};
 ldas_topo=load_coarse_topo(ldas_dem_file,ldas_topo_names,topo);
 
 %add in CERES data
-ceres.var_num=[3 4 6]; %incoming sw,lw,and pres
+% ceres.var_num=[3 4 6]; %incoming sw,lw,and pres
+ceres.var={'sfc_comp_sw-down_all_3h','sfc_comp_lw-down_all_3h',...
+'aux_surfpress_3h'};
 ceres.ceres_dir=ceres_dir;
 ceres_topo=load_coarse_topo(ceres_topofile,ldas_topo_names,topo);

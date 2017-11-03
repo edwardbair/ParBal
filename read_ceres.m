@@ -1,4 +1,4 @@
-function [C,hdr,varnames]=read_ceres(ceres_dir,gldas_matdates,tz,var_num)
+function [C,hdr,varnames]=read_ceres(ceres_dir,gldas_matdates,tz,var)
 % function to read ceres to go with gldas data
 % input
 % ceres dir, where the ceres CDF files live
@@ -7,7 +7,11 @@ function [C,hdr,varnames]=read_ceres(ceres_dir,gldas_matdates,tz,var_num)
 % available every 3 hr starting at 01:30, i.e.
 % 1:30,4:30,7:30,10:30,13:30,16:30,19:30,22:30
 % so nearest values will be picked.
-% var_num, variables num to retrieve, e.g. [3 4] = all sky incoming sw,lw
+% var, variables names to retrieve, as a cell e.g.
+% {'sfc_comp_sw-down_all_3h','sfc_comp_lw-down_all_3h',...
+% 'aux_surfpress_3h'}; for incoming sw,incoming lw,and surface pressure as 3
+% as 3hr averages
+
 % output
 % C, struct containing ceres info
 % hdr, coordinate info
@@ -20,7 +24,7 @@ assert(all(diff(matdates)>=3/24),'dates must be 3 hr apart')
 d=dir(fullfile(ceres_dir,'*.nc'));
 C.datevalsLocal=zeros(1,length(matdates));
 C.datevalsUTC=zeros(1,length(matdates));
-varnames=cell(size(var_num));
+varnames=cell(size(var));
 hdr.gridtype='geographic';
 for h=1:length(matdates)
     match=false;
@@ -46,10 +50,13 @@ for h=1:length(matdates)
     end
     C.datevalsUTC(h)=ceres_times(idx);
     C.datevalsLocal(h)=ceres_times(idx)+tz;
-    for i=1:length(var_num)
+    for i=1:length(var)
         ncid = netcdf.open(fname);
-        [varname,xtype,dimids,natts]  = netcdf.inqVar(ncid,var_num(i));
-        varname=strrep(varname,'-','_');
+        var_id=netcdf.inqVarID(ncid,var{i});
+        [~,~,dimids,~]  = netcdf.inqVar(ncid,var_id); 
+%         varnames{i}=varname;
+        %no dashes in struct field names
+        varname=strrep(var{i},'-','_');
         varnames{i}=varname;
         sz=zeros(size(dimids));
         for j=1:length(dimids)
@@ -68,7 +75,7 @@ for h=1:length(matdates)
                 sz(1)]);
         end
         %note start is zero based
-        x=netcdf.getVar(ncid,var_num(i),[0 0 start],[sz(1) sz(2) 1]);
+        x=netcdf.getVar(ncid,var_id,[0 0 start],[sz(1) sz(2) 1]);
         x(x<0)=NaN;
         x=flipud(x');
         %shift PM to dateline

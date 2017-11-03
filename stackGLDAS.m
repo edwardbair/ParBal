@@ -7,22 +7,22 @@ function GLDAS = stackGLDAS(gldas_filelist)
 %  GLDAS structure
 
 %check for primary/secondary location
-if isfield(gldas_filelist,'vars_locs')
-    secondary_flag=true;
-else
-    secondary_flag=false;
-end
+% if isfield(gldas_filelist,'vars_locs')
+%     secondary_flag=true;
+% else
+%     secondary_flag=false;
+% end
 % Read files
 for n=1:length(gldas_filelist.filenames)
-    for t=1:length(gldas_filelist.vars)
-        if secondary_flag && gldas_filelist.vars_locs(t)==2
-            field_name='secondary_filenames';
-        else
+    for t=1:length(gldas_filelist.var)
+%         if secondary_flag && strcmp(gldas_filelist.var,'')
+%             field_name='secondary_filenames';
+%         else
             field_name='filenames';
-        end
+%         end
         fname=gldas_filelist.(field_name){n};
-        LDAS = read_LDAS(gldas_filelist.vars{t},fname);
-        GLDAS.(gldas_filelist.vars{t})(:,:,n)=single(LDAS.matrix);
+        LDAS = read_LDAS(gldas_filelist.var{t},fname);
+        GLDAS.(gldas_filelist.var{t})(:,:,n)=single(LDAS.matrix);
     end
 end
 % Datevals
