@@ -114,9 +114,9 @@ B1=9.4.*C2;
 B2=C1.*sqrt(C2);
 opt_out=NaN(size(Lin_coarse),'single');
 % if ~isnan(albedo)
-    if ddflag % && ~isnan(Tsfc(:)) % Tsfc given
+    if ddflag && ~isnan(Tsfc) % Tsfc given
         [d,LinZ,Lout,sensible,G]=solve_debris_depth(Lin_coarse,Zdiff,T_fine,Vf,...
-            albedo,Sin,Tsfc,sig,emissivity.ems,rho_air,Cp,De_h,Kd);
+            albedo,Sin,Tsfc,sig,emissivity.emd,rho_air,Cp,De_h,Kd);
         opt_out=d;
     elseif ~ddflag %not solving for debris depth
         if ~fast_flag % solve w/ correct outputs

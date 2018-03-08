@@ -1,5 +1,5 @@
 function [d,LinZ,Lout,sensible,G]=solve_debris_depth(Lin_coarse,Zdiff,T_fine,Vf,...
-    albedo,Sin,Tsfc,sig,ems,rho_air,Cp,De_h,K)
+    albedo,Sin,Tsfc,sig,emd,rho_air,Cp,De_h,K)
 %solve for dry debris depth d at one time using inputs:
 %Lin_coarse, coarse  incoming longwave, W/m^2
 %Zdiff, difference between fine and coarse elevation, corresponding to
@@ -11,7 +11,7 @@ function [d,LinZ,Lout,sensible,G]=solve_debris_depth(Lin_coarse,Zdiff,T_fine,Vf,
 %ea, vapor pressure of air
 %Tsfc, debris surface temperature
 %sig, steffan boltzman constant
-%ems, emissivity of debris (i.e. 0.94 for metamorphic rock &
+%emd, emissivity of debris (i.e. 0.94 for metamorphic rock &
 %granite)
 %Cp, specific heat of air, J/(kg deg)
 %De_h, sensible heat exchange coefficient, m/sec
@@ -22,29 +22,30 @@ function [d,LinZ,Lout,sensible,G]=solve_debris_depth(Lin_coarse,Zdiff,T_fine,Vf,
 
 LinZ=lapseLongWave(Lin_coarse,Zdiff);
 % adjust for surrounding terrain
-Lout = -(ems.*sig.*Tsfc.^4);
-LinT = Vf.* LinZ + (1-Vf).*Lout;
+Lout = -(emd.*sig.*Tsfc.^4);
+LinT = Vf.* LinZ + (1-Vf).*-Lout;
 Lnet=LinT+Lout;
 Snet=Sin*(1-albedo);
 % assume a neutral atmosphere (stability = 1). See Rounce and McKiney 2014
 stability = single(1);
 sensible=rho_air.*Cp.*De_h.*stability.*(T_fine-Tsfc);
 % debris is dry during Tsfc aquisitions so latent = 0.
-% use iterative approach of Schauwecker et al 2015
-num_tries = 20;
-d0 = 0.45; %m, initial guess
-thresh = 1e-3;
-for i=1:num_tries
-    F = 6.17*d0+1;
-    d = ((1+F).*K.*(Tsfc-273.15))./(Snet+Lnet+sensible).*1/0.5;
-    if abs(d-d0) < thresh
-        break;
-    end
-    d0 = d;
-end
-%if d is negative or didn't converge
-if d < 0 || i==num_tries 
-    d=NaN;
-end
-%Schauwecker et al 2016
-G=(K.*(Tsfc-273.15))/(0.5*d);
+
+Tsfc_c=Tsfc-273.15;
+
+%Schauwecker approach
+% a=6.17;b=1;
+% F=@(d0) a*d0*b;
+% i_d=0.5;
+% ddepth=@(d0)(((1+F(d0))*K*Tsfc_c)/(Snet+Lnet+sensible))*(1/i_d);
+% minfct=@(d0) abs(d0-ddepth(d0));
+% options = optimset('Display','off');
+% lo=-2;
+% hi=2;
+% x=fminbnd(minfct,lo,hi,options);
+% d=x;
+
+%Rounce and McKinney approach
+Gratio=2.7;
+d=(Gratio*K*Tsfc_c)/(Snet+Lnet+sensible);
+G=(K.*(Tsfc-273.15))/(d);

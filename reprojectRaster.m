@@ -5,8 +5,9 @@ function [ B, RB, RRB] = reprojectRaster(A,RA,InStruct,OutStruct,varargin )
 %
 %INPUT
 %   A - input raster (can be 3D), any numeric type, or logical
-%   RA - referencing matrix for A
-%   InStruct - input projection structure, [] if geographic
+%   RA - referencing matrix for A, must be empty if input data are
+%       geolocated, in which case lat-lon are specified below
+%   InStruct - input projection structure, [] if geographic or geolocated
 %   OutStruct - output projection structure, [] if geographic
 % OPTIONAL INPUT
 %   name-value pairs in any order specifying . . .
@@ -17,10 +18,12 @@ function [ B, RB, RRB] = reprojectRaster(A,RA,InStruct,OutStruct,varargin )
 %       'method' - 'linear' (default), 'nearest' (fastest), 'cubic', or
 %           'spline'
 %       'rasterref' - output map or geo raster reference object
+%       'lat' and 'lon' - matrices of latitude and longitude, same size as
+%           first 2 dimensions of A, if input data are geolocated
 %
-%       These arguments ignored if 'rasterref' is used
+%       The following arguments are ignored if 'rasterref' is used
 %       'pixelsize' - height and width of output pixels (if scalar, both
-%           same, default is to match size of input)
+%           same, default is to match size of input image)
 %       'XLimit' and 'YLimit' - each vectors of length 2: min & max of output
 %           x- and y-coordinates (default is to cover extent of A)
 %       'Origin' - 'ul' (default unless 'rasterref' specified), 'll', 'ur', or 'lr'
@@ -39,26 +42,27 @@ assert(ismatrix(A) || ndims(A)==3,...
 % parse inputs
 optargin=size(varargin,2);
 assert (mod(optargin,2)==0,'must be even number of optional arguments')
-[InRasterRef,OutRasterRef,planet,method] =...
+[InRasterRef,OutRasterRef,planet,method,inLat,inLon] =...
     parseInput(size(A),RA,InStruct,OutStruct,varargin{:});
 
 % coarsen input image first if output is at significantly coarser
 % resolution, so that the output is averaged over multiple input pixels
-if strcmpi(InRasterRef.RasterInterpretation,'cells')
+if ~isempty(InRasterRef) && strcmpi(InRasterRef.RasterInterpretation,'cells')
     [InRasterRef,A] = coarsenInput(A,InRasterRef,OutRasterRef,planet,method);
 end
 
 % world coordinates in output image
 [XIntrinsic,YIntrinsic] =...
     meshgrid(1:OutRasterRef.RasterSize(2),1:OutRasterRef.RasterSize(1));
-if ~isempty(strfind(class(OutRasterRef),'MapCellsReference'))
+if contains(class(OutRasterRef),'MapCellsReference')
     [XWorld, YWorld] = intrinsicToWorld(OutRasterRef,XIntrinsic,YIntrinsic);
     [lat,lon] = minvtran(OutStruct,XWorld,YWorld);
-elseif ~isempty(strfind(class(OutRasterRef),'GeographicCellsReference'))
+elseif contains(class(OutRasterRef),'GeographicCellsReference')
     [lat,lon] = intrinsicToGeographic(OutRasterRef,XIntrinsic,YIntrinsic);
 else
     error('OutRasterRef class %s unrecognized',class(OutRasterRef))
 end
+
 % input coordinates that correspond to all output coordinates
 if isempty(InStruct) % input grid is lat-lon
     Xq = lon;
@@ -66,28 +70,46 @@ if isempty(InStruct) % input grid is lat-lon
 else
     [Xq,Yq] = mfwdtran(InStruct,lat,lon);
 end
-% all input coordinates
-[XIntrinsic,YIntrinsic] =...
-    meshgrid(1:InRasterRef.RasterSize(2),1:InRasterRef.RasterSize(1));
-if ~isempty(strfind(class(InRasterRef),'MapCellsReference'))
-    [X,Y] = intrinsicToWorld(InRasterRef,XIntrinsic,YIntrinsic);
-elseif ~isempty(strfind(class(InRasterRef),'GeographicCellsReference'))
-    [Y,X] = intrinsicToGeographic(InRasterRef,XIntrinsic,YIntrinsic);
+
+geolocated = ~isempty(inLat); % otherwise geographic or projected
+if geolocated
+    X = inLon;
+    Y = inLat;
 else
-    error('InRasterRef class %s unrecognized',class(InRasterRef))
+    % all input coordinates
+    [XIntrinsic,YIntrinsic] =...
+        meshgrid(1:InRasterRef.RasterSize(2),1:InRasterRef.RasterSize(1));
+    if contains(class(InRasterRef),'MapCellsReference')
+        [X,Y] = intrinsicToWorld(InRasterRef,XIntrinsic,YIntrinsic);
+    elseif contains(class(InRasterRef),'GeographicCellsReference')
+        [Y,X] = intrinsicToGeographic(InRasterRef,XIntrinsic,YIntrinsic);
+    else
+        error('InRasterRef class %s unrecognized',class(InRasterRef))
+    end
 end
 
 % interpolate to output points specified in terms of input coordinates
 % input values must be either double or single, so convert if necessary
 origtype = class(A);
-if ~isfloat(A)
-    A = double(A);
-end
+A = double(A);
+
 if ismatrix(A)
-    B = interp2(X,Y,A,Xq,Yq,method);
+    if geolocated
+        F = scatteredInterpolant(X(:),Y(:),A(:),method,'none');
+        B = F(Xq,Yq);
+    else
+        B = interp2(X,Y,A,Xq,Yq,method);
+    end
+    %     B = F(Xq,Yq);
 elseif ndims(A)==3
     for k=1:size(A,3)
-        B1 = interp2(X,Y,A(:,:,k),Xq,Yq,method);
+        if geolocated
+            V = A(:,:,k);
+            F = scatteredInterpolant(X(:),Y(:),V(:),method,'none');
+            B1 = F(Xq,Yq);
+        else
+            B1 = interp2(X,Y,A(:,:,k),Xq,Yq,method);
+        end
         % allocate on first pass
         if k==1
             B = zeros(size(B1,1),size(B1,2),size(A,3),'like',A);
@@ -101,14 +123,25 @@ end
 t = isnan(B);
 if any(t(:)) && ~strcmp(method,'nearest')
     if ismatrix(A)
-        NN = interp2(X,Y,A,Xq,Yq,'nearest');
+        if geolocated
+            F = scatteredInterpolant(X(:),Y(:),A(:),'nearest','none');
+            NN = F(Xq,Yq);
+        else
+            NN = interp2(X,Y,A,Xq,Yq,'nearest');
+        end
         B(t) = NN(t);
     else
         for k=1:size(A,3)
             B1 = B(:,:,k);
             t = isnan(B1);
             if any(t(:))
-                NN = interp2(X,Y,A(:,:,k),Xq,Yq,'nearest');
+                if geolocated
+                    V = A(:,:,k);
+                    F = scatteredInterpolant(X(:),Y(:),V(:),'nearest','none');
+                    NN = F(Xq,Yq);
+                else
+                    NN = interp2(X,Y,A(:,:,k),Xq,Yq,'nearest');
+                end
                 B1(t) = NN(t);
                 B(:,:,k) = B1;
             end
@@ -120,8 +153,8 @@ end
 if ~(strcmpi(origtype,'double') || strcmpi(origtype,'single'))
     B(isnan(B)) = 0;
     B = round(B);
-    B = cast(B,origtype);
 end
+B = cast(B,origtype);
 
 % set the output referencing matrix
 RB = RasterRefToRefMat(OutRasterRef);
@@ -227,7 +260,7 @@ end
 
 function [x11,y11,dx,dy,inProj] = cornerCoords(R)
 % corner coordinates from raster reference
-if ~isempty(strfind(class(R),'MapCellsReference'))
+if contains(class(R),'MapCellsReference')
     inProj = true;
     [x11,y11] = intrinsicToWorld(R,1,1);
     if strcmp(R.ColumnsStartFrom,'north')
@@ -240,7 +273,7 @@ if ~isempty(strfind(class(R),'MapCellsReference'))
     else
         dx = -R.CellExtentInWorldX;
     end
-elseif ~isempty(strfind(class(R),'GeographicCellsReference'))
+elseif contains(class(R),'GeographicCellsReference')
     inProj = false;
     [y11,x11] = intrinsicToGeographic(R,1,1);
     if strcmp(R.ColumnsStartFrom,'north')
@@ -258,7 +291,8 @@ else
 end
 end
 
-function [ InRR,OutRR,planet,method ] = parseInput( sizeA,R,InS,OutS,varargin )
+function [ InRR,OutRR,planet,method,inLat,inLon ] =...
+    parseInput( sizeA,R,InS,OutS,varargin )
 %parse input values to produce input/output raster references
 
 p = inputParser;
@@ -269,23 +303,24 @@ defaultAdjust = true;
 defaultOrigin = 'ul';
 defaultPlanet = 'earth';
 defaultWholeHemisphere = 'no';
-defaultMethod = 'bilinear';
+defaultMethod = 'linear';
 defaultRR = [];
 
 addRequired(p,'sizeA',@isnumeric);
-vRfcn =@(x) validateattributes(x,{'numeric'},{'size',[3 2]});
-addRequired(p,'R',vRfcn);
-addRequired(p,'InS',@isstruct);
-addRequired(p,'OutS',@isstruct);
-addParameter(p,'pixelsize',defaultPixelSize,@isnumeric);
-addParameter(p,'XLimit',defaultXLimit,@isnumeric);
-addParameter(p,'YLimit',defaultYLimit,@isnumeric);
-addParameter(p,'adjust',defaultAdjust,@islogical);
-addParameter(p,'origin',defaultOrigin,@ischar);
-addParameter(p,'planet',defaultPlanet,@ischar);
-addParameter(p,'wholeHemisphere',defaultWholeHemisphere,@ischar);
-addParameter(p,'method',defaultMethod,@ischar);
-addParameter(p,'rasterref',defaultRR,@isobject);
+addRequired(p,'R',@isnumeric)
+addRequired(p,'InS',@isstruct)
+addRequired(p,'OutS',@isstruct)
+addParameter(p,'pixelsize',defaultPixelSize,@isnumeric)
+addParameter(p,'XLimit',defaultXLimit,@isnumeric)
+addParameter(p,'YLimit',defaultYLimit,@isnumeric)
+addParameter(p,'adjust',defaultAdjust,@islogical)
+addParameter(p,'origin',defaultOrigin,@ischar)
+addParameter(p,'planet',defaultPlanet,@ischar)
+addParameter(p,'wholeHemisphere',defaultWholeHemisphere,@ischar)
+addParameter(p,'method',defaultMethod,@ischar)
+addParameter(p,'rasterref',defaultRR,@isobject)
+addParameter(p,'lat',[],@isnumeric)
+addParameter(p,'lon',[],@isnumeric)
 if isempty(InS)
     InS = struct([]);
 end
@@ -318,26 +353,39 @@ else
     lonlim = NaN;
 end
 
-if isempty(InS)
-    InRR = refmatToGeoRasterReference(p.Results.R,p.Results.sizeA);
-    if isnan(latlim)
-        [XIntrinsic,YIntrinsic] =...
-            meshgrid([1 InRR.RasterSize(2)],[1 InRR.RasterSize(1)]);
-        [latlim,lonlim] = intrinsicToGeographic(InRR,XIntrinsic,YIntrinsic);
-    end
+inLat = double(p.Results.lat);
+inLon = double(p.Results.lon);
+if isempty(p.Results.R)
+    assert(~isempty(p.Results.lat) && isequal(size(p.Results.lat),size(p.Results.lon)),...
+        'if input RefMatrix is empty, lat/lon of same size must be specified')
+    InRR = [];
+    latlim = double([min(p.Results.lat(:)) max(p.Results.lat(:))]);
+    lonlim = double([min(p.Results.lon(:)) max(p.Results.lon(:))]);
 else
-    InRR = refmatToMapRasterReference(p.Results.R,p.Results.sizeA);
-    if isnan(latlim)
-        [XIntrinsic,YIntrinsic] =...
-            meshgrid([1 InRR.RasterSize(2)],[1 InRR.RasterSize(1)]);
-        [xWorld,yWorld] = intrinsicToWorld(InRR,XIntrinsic, YIntrinsic);
-        [latlim,lonlim] = minvtran(InS,xWorld,yWorld);
+    validateattributes(R,{'numeric'},{'size',[3 2]});
+    assert(isempty(p.Results.lat) && isempty(p.Results.lon),...
+        'if input RefMatrix is specified, then input ''lat'' and ''lon'' must not be specified')
+    if isempty(InS)
+        InRR = refmatToGeoRasterReference(p.Results.R,p.Results.sizeA);
+        if isnan(latlim)
+            [XIntrinsic,YIntrinsic] =...
+                meshgrid([1 InRR.RasterSize(2)],[1 InRR.RasterSize(1)]);
+            [latlim,lonlim] = intrinsicToGeographic(InRR,XIntrinsic,YIntrinsic);
+        end
+    else
+        InRR = refmatToMapRasterReference(p.Results.R,p.Results.sizeA);
+        if isnan(latlim)
+            [XIntrinsic,YIntrinsic] =...
+                meshgrid([1 InRR.RasterSize(2)],[1 InRR.RasterSize(1)]);
+            [xWorld,yWorld] = intrinsicToWorld(InRR,XIntrinsic, YIntrinsic);
+            [latlim,lonlim] = minvtran(InS,xWorld,yWorld);
+        end
     end
 end
 
 % if raster reference specified, other values default to it
 % otherwise, parse other inputs
-if isempty(p.Results.rasterref) 
+if isempty(p.Results.rasterref)
     % start of rows and cols
     if strncmpi(p.Results.origin,'l',1)
         startcol = 'south';

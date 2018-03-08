@@ -9,6 +9,7 @@ function writeMeltCube(fsca_dir,melt_dir,out_dir,yr,nameprefix,varargin)
 %optional:
 %debris_dir - where debris melt files live
 debris_flag=false;
+debris_dir=[];
 if ~isempty(varargin)
     debris_dir=varargin{1};
     debris_flag=true;

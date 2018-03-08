@@ -1,4 +1,5 @@
-function [gldasInterp,ceresInterp]=makeInterp(gldas_filelist,gldas_topo,topo,mask,ceres,tz)
+function [gldasInterp,ceresInterp]=makeInterp(gldas_filelist,gldas_topo,topo,mask,ceres,tz,...
+    varargin)
 %make interpolated gldas and ceres data
 %input:
 %gldas_filelist - list of gldas files to load
@@ -6,7 +7,16 @@ function [gldasInterp,ceresInterp]=makeInterp(gldas_filelist,gldas_topo,topo,mas
 %topo - finescale topo struct
 %mask - mask for place to skip interpolation, e.g. from fsca or debris
 %ceres - struct w/ ceres filelist
+%tz - timezone
+%LDASOnlyFlag - use LDAS only inputs, optional
+%ouput
+% GLDASInterp - interp. GLDAS struc
+% ceresInterp - interp CERES struc (empty if LDASOnlyFlag)
 % reproject and interpolate ldas for specified datevals
+LDASOnlyFlag=false;
+if nargin==7
+    LDASOnlyFlag=varargin{1};
+end
     gldas_stacked = stackGLDAS(gldas_filelist);
     gldas_subset = subsetGLDAS(gldas_stacked,gldas_topo.CoarseRefMatrix,...
         topo.hdr,gldas_filelist.var,mask,true);
@@ -14,11 +24,15 @@ function [gldasInterp,ceresInterp]=makeInterp(gldas_filelist,gldas_topo,topo,mas
     % do the same for ceres data, which is offset from GLDAS by +1.5 hr,
     %and therefore needs the 2230 local time from the previous day to the
     %130 local time in order interpolate from midnight to midnight
-getCERESdatevalsUTC=(gldas_stacked.datevalsUTC(1)-...
+    if ~LDASOnlyFlag
+    getCERESdatevalsUTC=(gldas_stacked.datevalsUTC(1)-...
     1.5/24:3/24:gldas_stacked.datevalsUTC(end)+1.5/24);
      [ceres_stacked,ceres_hdr,ceres_varnames]=read_ceres(ceres.ceres_dir,...
         getCERESdatevalsUTC,tz,ceres.var);
     ceres_subset = subsetGLDAS(ceres_stacked,ceres_hdr.RefMatrix,...
         topo.hdr,ceres_varnames,mask,true);
     ceresInterp = interpGLDAS2hourly(ceres_subset,ceres_varnames);
+    else
+        ceresInterp=[];
+    end
 end

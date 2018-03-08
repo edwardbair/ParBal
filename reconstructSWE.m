@@ -11,6 +11,8 @@ function reconstructSWE(poolsize,energy_dir,sFile,rFile,varargin)
 % watermaskfile - binary water mask where SWE is set to zero
 % canopycoverfile - static canopy cover fraction file, h5 or mat file with
 % "cc" or "/Grid/cc" variable
+% note: if cc is supplied and fsca projection doesn't match, fsca will be
+% reprojected to match
 tic;
 numArgs = 4;
 if nargin<numArgs
@@ -41,7 +43,6 @@ assert(exist(sFile,'file')==2,'fsca file (%s) does not exist',sFile);
 recon_dir = identifyFolders(recon_dir);
 rFile = fullfile(recon_dir,[fname,ext]);
 
-
 if isdeployed
     h = StartAzureDiary(mfilename,diaryFolder,...
         datestr(datevalsDay(1),'yyyymmdd'),'-',datestr(datevalsDay(end))); %#ok<NASGU>
@@ -62,11 +63,50 @@ addParameter(p,'watermaskfile',defaultwatermask,@ischar);
 addParameter(p,'canopycoverfile',defaultcanopycover,@ischar);
 parse(p,poolsize,energy_dir,sFile,rFile,varargin{:})
 
-%determine cube sizes
-info=h5info(sFile,'/Grid/MODIS_GRID_500m/');
-sz=info.Datasets(1).Dataspace.Size;
-
 %read optional files
+%canopycoverfile
+canopycoverfile=p.Results.canopycoverfile;
+ccflag=false;
+if ~isempty(canopycoverfile)
+    [~,~,ext]=fileparts(canopycoverfile);
+    ccflag=true;
+    switch ext
+        case '.mat'
+            list={'cc','RefMatrix','RasterReference','ProjectionStructure'};
+            for j=1:length(list)
+                m=load(canopycoverfile,'-regexp',['(?i)(',list{j},')']);
+                if isempty(m)
+                    error('could not read %s in canopycoverfile %s',list{j},...
+                        canopycoverfile);
+                else
+                    fn=fieldnames(m(1));
+                    target_fn=list{j};
+                    switch target_fn
+                        case 'cc'
+                            cc.(target_fn)=m.(fn{1});
+                        otherwise % hdr info
+                            cc.hdr.(target_fn)=m.(fn{1});
+                    end
+                end
+            end
+        case '.h5'
+            try
+                cc.cc=h5read(canopycoverfile,'/Grid/cc');
+                cc.hdr=GetCoordinateInfo(canopycoverfile,'/Grid/',size(cc.cc));
+            catch
+                error(['could not find dataset in ''/Grid''',...
+                    ' in h5file:',canopycoverfile]);
+            end
+    end
+    %use cc for size
+    sz=[size(cc.cc) length(datevalsDay)];
+else
+    %use fsca for size
+    info=h5info(sFile,'/Grid/MODIS_GRID_500m/');
+    sz=info.Datasets(1).Dataspace.Size;
+    cc.cc=zeros([sz(1) sz(2)]);
+end
+
 %max swe date mask
 maxswefile=p.Results.maxswefile;
 if ~isempty(maxswefile)
@@ -117,29 +157,6 @@ end
 
 watermask=repmat(logical(watermask),[1 1 sz(3)]);
 
-%canopycoverfile
-canopycoverfile=p.Results.canopycoverfile;
-if ~isempty(canopycoverfile)
-    [~,~,ext]=fileparts(canopycoverfile);
-    switch ext
-        case '.mat';
-            m=load(canopycoverfile,'-regexp','.*cc.*');
-            if isempty(m)
-                error('could not read canopycoverfile %s',canopycoverfile);
-            end
-            fn=fieldnames(m(1));
-            cc=m.(fn{1});
-        case '.h5';
-            try
-                cc=h5read(canopycoverfile,'/Grid/cc');
-            catch
-                error(['could not find dataset in ''/Grid''',...
-                    ' in h5file:',canopycoverfile]);
-            end
-    end
-else
-    cc=zeros([sz(1) sz(2)]);
-end
 
 %start parallel pool
 poolsize=p.Results.poolsize;
@@ -161,8 +178,14 @@ parfor d=1:length(datevalsDay)
     t=datevalsDay(d);
     fprintf('reconstructing %s\n',datestr(t));
     %load sca
-    rawsca=GetEndmember(sFile,'snow',t);
-    cctmp=cc;
+    [rawsca,~,hdr]=GetEndmember(sFile,'snow',t);
+    %if a canopy cover file was supplied and it has a different header,
+    %reproject
+    if ccflag && ~isequal(hdr,cc.hdr)
+        rawsca=reprojectRaster(rawsca,hdr.RefMatrix,hdr.ProjectionStructure,...
+            cc.hdr.ProjectionStructure,'rasterref',cc.hdr.RasterReference);
+    end
+    cctmp=cc.cc;
     ind=rawsca+cctmp > 1;
     cctmp(ind)=1-rawsca(ind);
     sca=rawsca./(1-cctmp);
@@ -182,7 +205,15 @@ vecsize=rsize(1)*rsize(2);
 sweR.melt=uint16(melt);
 sweR.melt(watermask)=0;
 
-[sca,~,header]=GetEndmember(sFile,'snow_fraction');
+[sca,~,hdr]=GetEndmember(sFile,'snow_fraction');
+% have to reproject again since last time was done in parfor loop
+% if a canopy cover file was supplied and it has a different header,
+    %reproject
+    if ccflag && ~isequal(hdr,cc.hdr)
+        sca=reprojectRaster(sca,hdr.RefMatrix,hdr.ProjectionStructure,...
+            cc.hdr.ProjectionStructure,'rasterref',cc.hdr.RasterReference);
+        hdr=cc.hdr;
+    end
 swe=zeros([length(datevalsDay) vecsize],'single');
 
 %reshape inputs
@@ -234,7 +265,7 @@ units='mm';
 switch ext
     case '.mat'
         save(rFile,'-struct','sweR','-v7.3');
-        save(rFile','units','datevalsDay','header','-append');
+        save(rFile','units','datevalsDay','hdr','-append');
     case '.h5'
         deflateLevel=9;
         if ~isempty(dir(rFile));
@@ -256,9 +287,9 @@ switch ext
                 h5writeatt(rFile,location,'units',units);
             end
         end
-        h5writeProjection(rFile,'/Grid',header.ProjectionStructure);
+        h5writeProjection(rFile,'/Grid',hdr.ProjectionStructure);
         h5writeatt(rFile,'/','MATLABdates',datevalsDay);
-        h5writeatt(rFile,'/Grid','ReferencingMatrix',header.RefMatrix);
+        h5writeatt(rFile,'/Grid','ReferencingMatrix',hdr.RefMatrix);
 end
 t=toc;
 fprintf('SWE reconstructed and saved in %3.1f min\n',t/60);

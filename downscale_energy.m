@@ -1,11 +1,10 @@
-function downscale_energy(sFileDay,sFile,poolsize,topofile,landcoverfile,...
-    ldas_dir,ldas_dem_file,ceres_dir,ceres_topofile,fast_flag,outdir)
+function downscale_energy(sFileDay,sFile,topofile,landcoverfile,...
+    ldas_dir,ldas_dem_file,ceres_dir,ceres_topofile,fast_flag,outdir,varargin)
 % downscales energy for a day, specifically meant for running on individual
 % workers on Azure. Contains a parfor loop for computing snow surface
 % temperatures
 % input:
 % sFileDay - scalar value corresponding to day (slice) of sFile
-% poolsize - size of parallel pool
 % sFile - path to h5 smoothed fSCA cube that must contain: snow_fraction,grain_size,and
 % deltavis
 % topofile - path to h5 topofile created by TopoHorizons
@@ -16,7 +15,8 @@ function downscale_energy(sFileDay,sFile,poolsize,topofile,landcoverfile,...
 % ceres_topofile - path to ceres topofile (mat - h5 not implemented yet)
 % fast flag - true - only solve for M; false - solve for all outputs; only set for 'normal'
 % outdir - path to write out files, must already be created
-
+% optional - boolean flag for LDAS only mode (true) - normally assume false and run w/ LDAS
+% + CERES. If false, all other CERES inputs are ignored
 numarg=7;
 
 if isdeployed && nargin~=numarg
@@ -28,7 +28,7 @@ p = inputParser;
 validationFcn = @(x) isnumeric(x) || ischar(x);
 addRequired(p,'sFileDay',validationFcn)
 addRequired(p,'sFile',validationFcn)
-addRequired(p,'poolsize',validationFcn)
+% addRequired(p,'poolsize',validationFcn)
 addRequired(p,'topofile',validationFcn)
 addRequired(p,'landcoverfile',validationFcn)
 addRequired(p,'ldas_dir',validationFcn)
@@ -37,8 +37,15 @@ addRequired(p,'ceres_dir',validationFcn)
 addRequired(p,'ceres_topofile',validationFcn)
 addRequired(p,'outdir',validationFcn)
 
-parse(p,sFileDay,sFile,poolsize,topofile,landcoverfile,ldas_dir,ldas_dem_file,...
-    ceres_dir,ceres_topofile,outdir)
+LDASOnlyFlag=false;
+addOptional(p,'LDASOnlyFlag',@islogical);
+if nargin==11
+    LDASOnlyFlag=varargin{1};
+end
+
+parse(p,sFileDay,sFile,topofile,landcoverfile,ldas_dir,ldas_dem_file,...
+    ceres_dir,ceres_topofile,outdir,LDASOnlyFlag)
+
 
 % variables
 if ~isnumeric(p.Results.sFileDay)
@@ -47,9 +54,10 @@ end
 
 % get required variables and filenames
 [FOREST, topo, ldas, ldas_topo, dateval, sFile, ceres,...
-    ceres_topo,tz,outfile]=include_vars_melt(sFileDay,sFile,poolsize,topofile,...
-    landcoverfile,ldas_dir,ldas_dem_file,ceres_dir,ceres_topofile,outdir);
+    ceres_topo,tz,outfile]=include_vars_melt(sFileDay,sFile,topofile,...
+    landcoverfile,ldas_dir,ldas_dem_file,ceres_dir,ceres_topofile,outdir,...
+    LDASOnlyFlag);
 
 %run downscaling
 daily_melt(dateval,ldas,ceres,topo,ldas_topo,ceres_topo,...
-    tz,FOREST,sFile,outfile,fast_flag)
+    tz,FOREST,sFile,outfile,fast_flag,LDASOnlyFlag)
