@@ -6,32 +6,56 @@ function reconstructSWE(poolsize,energy_dir,sFile,rFile,varargin)
 % energy_dir - Directory for energy cube files for yr, daily
 % sFile - time/space smoothed SCA cube for yr, daily
 % rFile - reconstruction ouputfile, mat or h5
-% optional:
+% optional name-value pairs:
 % maxswedatesfile - peak SWE dates to limit reconstruction; otherwise zeros
 % watermaskfile - binary water mask where SWE is set to zero
 % canopycoverfile - static canopy cover fraction file, h5 or mat file with
 % "cc" or "/Grid/cc" variable
 % note: if cc is supplied and fsca projection doesn't match, fsca will be
 % reprojected to match
+% matdates - list of matdates to process. overrides default behavoir which
+% is to reconstruct all dates in sFile
 tic;
 numArgs = 4;
 if nargin<numArgs
     disp(['minimum ' num2str(numArgs) '(>' num2str(nargin) ') arguments required'])
     if isdeployed
         disp(['usage: ' mfilename ' poolsize energy_dir sFile outdir [optional name/value pairs: ',...
-            '[maxswefile maxswefilename],[watermaskfile watermaskfilename canopycoverfile]']);
+            '[maxswefile maxswefilename],[watermaskfile watermaskfilename canopycoverfile matdates matdatesvector]']);
     else
         disp(['usage: ' mfilename '(poolsize,energy_dir,sFile,outdir [optional name/value pairs: ',...
-            '[''maxswefile'' maxswefilename],[''watermaskfile'' watermaskfilename canopycoverfile])']);
+            '[''maxswefile'' maxswefilename],[''watermaskfile'' watermaskfilename canopycoverfile matdates matdatesvector])']);
     end
     disp('see documentation about optional arguments')
     return
 end
 
-try
-    datevalsDay=h5readatt(sFile,'/','MATLABdates');
-catch
-    error('could not find record MATLABdates in %s',sFile)
+% parse inputs
+defaultmaxswe = [];
+defaultwatermask = [];
+defaultcanopycover = [];
+defaultmatdates = [];
+
+p = inputParser;
+addRequired(p,'poolsize',@isnumeric);
+addRequired(p,'energy_dir',@ischar)
+addRequired(p,'sFile',@ischar)
+addRequired(p,'rFile',@ischar)
+addParameter(p,'maxswefile',defaultmaxswe,@ischar);
+addParameter(p,'watermaskfile',defaultwatermask,@ischar);
+addParameter(p,'canopycoverfile',defaultcanopycover,@ischar);
+addParameter(p,'matdates',defaultmatdates,@isnumeric);
+parse(p,poolsize,energy_dir,sFile,rFile,varargin{:})
+
+%get matdates from sFile or from name-value pair
+if isempty(p.Results.matdates)
+    try
+        datevalsDay=h5readatt(sFile,'/','MATLABdates');
+    catch
+        error('could not find record MATLABdates in %s',sFile)
+    end
+else
+    datevalsDay=p.Results.matdates;
 end
 
 [fsca_dir,fname,ext] = fileparts(sFile);
@@ -47,21 +71,6 @@ if isdeployed
     h = StartAzureDiary(mfilename,diaryFolder,...
         datestr(datevalsDay(1),'yyyymmdd'),'-',datestr(datevalsDay(end))); %#ok<NASGU>
 end
-
-% parse inputs
-defaultmaxswe = [];
-defaultwatermask = [];
-defaultcanopycover = [];
-
-p = inputParser;
-addRequired(p,'poolsize',@isnumeric);
-addRequired(p,'energy_dir',@ischar)
-addRequired(p,'sFile',@ischar)
-addRequired(p,'rFile',@ischar)
-addParameter(p,'maxswefile',defaultmaxswe,@ischar);
-addParameter(p,'watermaskfile',defaultwatermask,@ischar);
-addParameter(p,'canopycoverfile',defaultcanopycover,@ischar);
-parse(p,poolsize,energy_dir,sFile,rFile,varargin{:})
 
 %read optional files
 %canopycoverfile
@@ -192,7 +201,7 @@ parfor d=1:length(datevalsDay)
     sca(rawsca==0)=0;
     %load potential melt
     fname=fullfile(energy_dir,[datestr(t,'yyyymmdd'),'.mat']);
-%     [M,MATLABdates]=parload(fname,'M','MATLABdates');
+    %     [M,MATLABdates]=parload(fname,'M','MATLABdates');
     m=matfile(fname);
     M=m.M;
     melt(:,:,d)=single(M).*mf.*sca;
@@ -205,15 +214,15 @@ vecsize=rsize(1)*rsize(2);
 sweR.melt=uint16(melt);
 sweR.melt(watermask)=0;
 
-[sca,~,hdr]=GetEndmember(sFile,'snow_fraction');
+[sca,~,hdr]=GetEndmember(sFile,'snow_fraction',datevalsDay);
 % have to reproject again since last time was done in parfor loop
 % if a canopy cover file was supplied and it has a different header,
-    %reproject
-    if ccflag && ~isequal(hdr,cc.hdr)
-        sca=reprojectRaster(sca,hdr.RefMatrix,hdr.ProjectionStructure,...
-            cc.hdr.ProjectionStructure,'rasterref',cc.hdr.RasterReference);
-        hdr=cc.hdr;
-    end
+%reproject
+if ccflag && ~isequal(hdr,cc.hdr)
+    sca=reprojectRaster(sca,hdr.RefMatrix,hdr.ProjectionStructure,...
+        cc.hdr.ProjectionStructure,'rasterref',cc.hdr.RasterReference);
+    hdr=cc.hdr;
+end
 swe=zeros([length(datevalsDay) vecsize],'single');
 
 %reshape inputs
@@ -231,7 +240,7 @@ parfor k=1:vecsize;
     if maxswedates(k) > 0 && any(sca_vec);
         % look for contiguous sca pds
         % eliminate spurious zeros in SCA
-%         sca_vec=slidefun(@max,7,sca_vec,'central');
+        %         sca_vec=slidefun(@max,7,sca_vec,'central');
         [start,finish] = contiguous(sca_vec);
         %get rid of contiguous pds w/ start and finish prior to peak
         %whats left are contiguous pds that start before or on peak
@@ -268,10 +277,10 @@ switch ext
         save(rFile','units','datevalsDay','hdr','-append');
     case '.h5'
         deflateLevel=9;
-        if ~isempty(dir(rFile));
+        if ~isempty(dir(rFile))
             delete(rFile);
         end
-        for i=1:length(fn);
+        for i=1:length(fn)
             sz=size(sweR.(fn{i}));
             if length(sz) > 2
                 ChunkSize=[sz(1:2) 1];

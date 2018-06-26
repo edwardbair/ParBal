@@ -1,4 +1,4 @@
-function [M,Tsfc,Lin,LinZ,Lout,sensible,latent,G,windspd,opt_out] = ...
+function [M,Tsfc,Lin,LinZ,Lout,sensible,latent,G,windspd,Td,ea,opt_out] = ...
     run_ebalance(todays_dateval,Lin_coarse,q_coarse,Zdiff,T_coarse,T_fine,...
     p_coarse,p_fine,albedo,Sin,topo,windS,fast_flag,mode,opt_in)
 % calls solve ebalance in a parfor loop
@@ -37,6 +37,8 @@ function [M,Tsfc,Lin,LinZ,Lout,sensible,latent,G,windspd,opt_out] = ...
 % sensible - sensible heat flux, W/m^2
 % latent - latent heat flux, W/m^2
 % G - conduction, W/m^2
+% Td - dewpoint temp, K
+% ea - vapor pressure air, kPa
 % windspd - wind speed, m/s
 % optional output:
 % opt_out - debris depth, m, only for 'debris_depth' mode; NaN otherwise
@@ -68,7 +70,7 @@ end
 windspd=windS.windspd;
 
 if fast_flag %call with matrices and don't solve for Tsfc
-    [M,Tsfc,Lin,LinZ,Lout,sensible,latent,G]=...
+    [M,Tsfc,Lin,LinZ,Lout,sensible,latent,G,Td,ea]=...
         solve_ebalance(Lin_coarse,q_coarse,Zdiff,...
         T_coarse,T_fine,Vf,albedo,Sin,windspd,...
         p_coarse,p_fine,fast_flag,mode,opt_input,cc);
@@ -98,12 +100,14 @@ else %call in a loop for each pixel and solve for Tsfc
     sensible=NaN(size(Lin_coarse));
     latent=NaN(size(Lin_coarse));
     G=NaN(size(Lin_coarse));
+    Td=NaN(size(Lin_coarse));
+    ea=NaN(size(Lin_coarse));
     opt_output=NaN(size(Lin_coarse));
     
     for i=1:length(M)
         if ~isnan(albedo(i)) %skip areas w/o snow or debris
             [M(i),Tsfc(i),Lin(i),LinZ(i),Lout(i),sensible(i),latent(i),...
-                G(i),opt_output(i)]=...
+                G(i),Td(i),ea(i),opt_output(i)]=...
                 solve_ebalance(Lin_coarse(i),q_coarse(i),Zdiff(i),...
                 T_coarse(i),T_fine(i),Vf(i),albedo(i),Sin(i),windspd(i),...
                 p_coarse(i),p_fine(i),fast_flag,mode,opt_input(i),cc(i));
@@ -119,6 +123,8 @@ else %call in a loop for each pixel and solve for Tsfc
     latent=reshape(latent,sz);
     windspd=reshape(windspd,sz);
     G=reshape(G,sz);
+    Td=reshape(Td,sz);
+    ea=reshape(ea,sz);
     if strcmp(mode,'debris depth')
         opt_out=reshape(opt_output,sz);
     else

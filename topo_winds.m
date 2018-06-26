@@ -85,12 +85,12 @@ winddir(ind)=winddir(ind) - 0.5.*min(rad2deg(wind_slope(ind)),45).*...
 end
 
 ind2=winddir > 360 & ind;
-if any(ind2(:));
+if any(ind2(:))
 winddir(ind2)=winddir(ind2)-360;
 end
 
 ind3=winddir < 0 & ind;
-if any(ind3(:));
+if any(ind3(:))
 winddir(ind3)=winddir(ind3)+360;
 end
 %extract u and v

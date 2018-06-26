@@ -1,5 +1,6 @@
 function writeMeltCube(fsca_dir,melt_dir,out_dir,yr,nameprefix,varargin)
 %write melt cube (no reconstruction) from daily inputs
+%note: no canopy adjustment or watermask option
 %input
 %fsca_dir - where fsca h5 cubes live
 %melt_dir - where melt daily mat files live

@@ -2,7 +2,7 @@
 %%%%%%%%%%%% GET THE PDS STRUCTURE %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function pds_struct=get_pds(fid,lenpds)
-global ParamTable Parameter_Table
+
 pds=fread(fid,lenpds);%read the whole pds into memory
 
 pds_struct.len=lenpds;              % the length of pds
@@ -13,11 +13,6 @@ pds_struct.GridID=pds(7);           % grid identification (geographical location
 temp=table1(pds(8));                % flag specifying the presence or abscence of GDS or a BMS; table 1
 pds_struct.HASGDS=temp(1);
 pds_struct.HASBMS=temp(2);
-
-if strcmp(ParamTable,'NCEPOPER') && (pds_struct.PTV == 128 || pds_struct.PTV == 129 || pds_struct.PTV == 0)
-  Remap_Parameter_Table(pds_struct.PTV);
-end
-
 pds_struct.parameter=Get_Parameter(pds(9),1);   % parameter name
 pds_struct.units=Get_Parameter(pds(9),3);       % parameter units
 pds_struct.description=Get_Parameter(pds(9),2); % parameter description
@@ -31,7 +26,7 @@ end
 
 %pds_struct.layer=[int2str(pds(10)) ' - ' layerstr ' [' layerabbrev ']'];
 pds_struct.h_p_etc=pds(11:12);    % height, pressure,etc. of the level or layer,table 3
-pds_struct.year=pds(13);
+pds_struct.year=pds(13)+100*(pds(25)-1);
 pds_struct.month=pds(14);
 pds_struct.day=pds(15);
 pds_struct.hour=pds(16);

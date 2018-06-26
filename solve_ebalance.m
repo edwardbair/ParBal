@@ -1,4 +1,4 @@
-function [M,Tsfc,Lin,LinZ,Lout,sensible,latent,G,opt_out]=...
+function [M,Tsfc,Lin,LinZ,Lout,sensible,latent,G,Td,ea,opt_out]=...
     solve_ebalance(Lin_coarse,q_coarse,Zdiff,T_coarse,T_fine,Vf,...
     albedo,Sin,windspd,pres_coarse,pres_fine,fast_flag,mode,varargin)
 
@@ -41,6 +41,8 @@ function [M,Tsfc,Lin,LinZ,Lout,sensible,latent,G,opt_out]=...
 % sensible, sensible heat flux, W/m^2
 % latent, latent heat flux, W/m^2
 % G, conductive heat flux, W/m^2
+% Td, dewpoint temperature, K
+% ea, vapor pressure of air, kPa
 % optional, if mode is 'debris depth'
 % opt_out - d, debris depth, m, NaN otherwise
 
@@ -64,7 +66,7 @@ z_0d=single(0.05); %debris roughness length, m, Lejeune and other, 2013
 z_0s=single(0.0005); %snow roughness length, m
 Kd=single(1.0); %W/(m deg K), debris avg from Schauwecker and other, 2015
 %air vapor pressure
-[~,ea]=downscaleDewpoint(pres_coarse,q_coarse,T_coarse,T_fine);
+[Td,ea]=downscaleDewpoint(pres_coarse,q_coarse,T_coarse,T_fine);
 %convert kPa to Pa
 ea=ea*1000;
 
@@ -112,7 +114,9 @@ C1=5.3.*9.4.*(xkappa./(log(ht_wind_obs./z_0))).^2.*...
 C2=gravity.*ht_wind_obs./(T_fine.*windspd.^2);
 B1=9.4.*C2;
 B2=C1.*sqrt(C2);
+%place holder
 opt_out=NaN(size(Lin_coarse),'single');
+
 % if ~isnan(albedo)
     if ddflag && ~isnan(Tsfc) % Tsfc given
         [d,LinZ,Lout,sensible,G]=solve_debris_depth(Lin_coarse,Zdiff,T_fine,Vf,...

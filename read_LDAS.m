@@ -6,7 +6,7 @@ function LDAS = read_LDAS(v,filename)
 % v - character array describing variable (see list of variables below)
 % filename - .grb filename for NLDAS or GLDAS, character array
 %OUTPUT
-% LDASconus.matrix - NLDAS 2d, y by x 
+% LDASconus.matrix - NLDAS 2d, y by x
 % LDASconus.Rmap - referencing matrix for NLDAS
 % LDASconus.units - units of variable
 % LDASconus.datevals - MATLAB date values in local time
@@ -15,16 +15,16 @@ function LDAS = read_LDAS(v,filename)
 % Accumulation - 1 hr
 % Rec  Name   Units  Quantity       Level               Description
 % -------------------------------------------------------------------------
-% 1  - TMP    K       Valid at P1   2 m above gnd       Temp. 
-% 2  - SPFH   kg/kg   Valid at P1   2 m above gnd       Specific humidity 
-% 3  - PRES   Pa      Valid at P1   surface             Pressure 
-% 4  - UGRD   m/s     Valid at P1   10 m above gnd      u wind 
-% 5  - VGRD   m/s     Valid at P1   10 m above gnd      v wind 
-% 6  - DLWRF  W/m^2   Valid at P1   surface             Downward long wave flux 
-% 7  - CLWMR  kg/kg   Accumulation  surface             Cloud water 
-% 8  - CAPE   J/kg    Valid at P1   180-0 mb above gnd  Convective Avail. Pot. Energy 
-% 9  - PEVAP  kg/m^2  Accumulation  surface              Pot. evaporation 
-% 10 - APCP   kg/m^2  Accumulation  surface              Total precipitation 
+% 1  - TMP    K       Valid at P1   2 m above gnd       Temp.
+% 2  - SPFH   kg/kg   Valid at P1   2 m above gnd       Specific humidity
+% 3  - PRES   Pa      Valid at P1   surface             Pressure
+% 4  - UGRD   m/s     Valid at P1   10 m above gnd      u wind
+% 5  - VGRD   m/s     Valid at P1   10 m above gnd      v wind
+% 6  - DLWRF  W/m^2   Valid at P1   surface             Downward long wave flux
+% 7  - CLWMR  kg/kg   Accumulation  surface             Cloud water
+% 8  - CAPE   J/kg    Valid at P1   180-0 mb above gnd  Convective Avail. Pot. Energy
+% 9  - PEVAP  kg/m^2  Accumulation  surface              Pot. evaporation
+% 10 - APCP   kg/m^2  Accumulation  surface              Total precipitation
 % 11 - DSWRF  W/m^2   Valid at P1   surface              Downward short wave flux
 
 % GLAS, description for netCDF4 format
@@ -65,7 +65,7 @@ function LDAS = read_LDAS(v,filename)
 % Psurf_f_inst Pressure Pa
 % SWdown_f_tavg Downward short-wave radiation flux W m-2
 % LWdown_f_tavg Downward long-wave radiation flux W m-2
-% 
+%
 % The short names with extension “_tavg” are past 3-hr averaged variables.
 % The short names with extension “_acc” are past 3-hr accumulated variables.
 % The short names with extension “_inst” are instantaneous variables.
@@ -83,47 +83,48 @@ end
 
 %Read file
 if nldas_flag
-    grib_struct=read_grib(filename,{v});
-if isempty(grib_struct)
-    error('empty grib for file:%s variable: %s',filename,v);
-end
-%Get Matrix Dimensions, create referencing matrix and bounding box
-gds=grib_struct.gds;
-Ni=gds.Ni;
-Nj=gds.Nj;
-Di=gds.Di;
-Dj=gds.Dj;
-% Make referencing matrix for NLDAS, it appears rounded so adjust
-%http://www.emc.ncep.noaa.gov/mmb/nldas/LDAS8th/LDASspecs/LDASspecs.shtml
-%LDASconus.Rmap = makerefmat(-124.9375,52.9375, Dj, -Di);
-Rmap = makerefmat(gds.Lo1+0.0005,gds.La2-0.0005, Dj, -Di);
-%Reshape,rotate, and scale matrix
-dt=rot90(reshape(grib_struct.fltarray,[Ni Nj]));
-matrix=dt;
-%9.9990e+20 is commonly the no data value but does not appear anywhere
-max_dt=max(max(dt));
-if max_dt>0
-    dt(dt==max_dt)=NaN;
-end
-
-%Universal Time
-pds=grib_struct.pds;
-
-%Use 2 digit year to get 4 digit year, (hack?)
-if pds.year < 100 && pds.year > 50
-    y1=19;
-elseif pds.year==100
-    y1 = 20;
-    pds.year=00;
-else y1=20;
-end
-yr=str2double([sprintf('%02s',num2str(y1)) ...
-    sprintf('%02s',num2str(pds.year))]);
-
-% Add datevals to output structure
-dateval=datenum([yr pds.month pds.day pds.hour pds.min 0]);
-units=grib_struct.units;
-
+    grib_struct=read_grib(filename,{v},'ParamTable','NCEPREAN','ScreenDiag',0);
+    if isempty(grib_struct)
+        error('empty grib for file:%s variable: %s',filename,v);
+    end
+    %Get Matrix Dimensions, create referencing matrix and bounding box
+    gds=grib_struct.gds;
+    Ni=gds.Ni;
+    Nj=gds.Nj;
+    Di=gds.Di;
+    Dj=gds.Dj;
+    % Make referencing matrix for NLDAS, it appears rounded so adjust
+    %http://www.emc.ncep.noaa.gov/mmb/nldas/LDAS8th/LDASspecs/LDASspecs.shtml
+    %LDASconus.Rmap = makerefmat(-124.9375,52.9375, Dj, -Di);
+    Rmap = makerefmat(gds.Lo1+0.0005,gds.La2-0.0005, Dj, -Di);
+    %Reshape,rotate, and scale matrix
+    dt=rot90(reshape(grib_struct.fltarray,[Ni Nj]));
+    %9.9990e+20 is commonly the no data value
+    max_dt=max(max(dt));
+    if max_dt>0
+        dt(dt==max_dt)=NaN;
+    end
+    matrix=dt;
+    
+    %Universal Time
+    pds=grib_struct.pds;
+    
+    %Use 2 digit year to get 4 digit year, (hack?)
+    if pds.year < 100 && pds.year > 50
+        y1=19;
+    elseif pds.year==100
+        y1 = 20;
+        pds.year=00;
+    else
+        y1=20;
+    end
+    yr=str2double([sprintf('%02s',num2str(y1)) ...
+        sprintf('%02s',num2str(pds.year))]);
+    
+    % Add datevals to output structure
+    dateval=datenum([yr pds.month pds.day pds.hour pds.min 0]);
+    units=grib_struct.units;
+    
 elseif  gldas_flag
     ncid = netcdf.open(filename);
     varid = netcdf.inqVarID(ncid,v);

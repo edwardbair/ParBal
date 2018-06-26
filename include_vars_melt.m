@@ -1,6 +1,7 @@
 function [FOREST, topo, ldas, ldas_topo, dateval, sFile, ceres, ...
     ceres_topo,tz,outfile]=include_vars_melt(sFileDay,sFile,topofile,...
-    landcoverfile,ldas_dir,ldas_dem_file,ceres_dir,ceres_topofile,outdir,LDASOnlyFlag)
+    landcoverfile,ldas_dir,ldas_dem_file,ceres_dir,ceres_topofile,outdir,...
+    LDASOnlyFlag)
 % for each day or set of days
 % assemble variables needed to downscale energy balance
 
@@ -79,7 +80,7 @@ switch ext
                 error('could not read landcover file %s',landcoverfile);
             end
             fn=fieldnames(m);
-            for i=1:length(fn);
+            for i=1:length(fn)
                 LandCover.(fn{i})=m.(fn{i});
             end
     case '.h5'
@@ -104,10 +105,9 @@ ldas=make_ldas_filelist(dateval,ldas_dir,tz);
 
 %LDAS variable list
 if contains(ldas_dem_dir,'NLDAS')
-    ldas.vars ={'TMP','PRES','UGRD','VGRD','SPFH'};
+    ldas.var ={'TMP','PRES','UGRD','VGRD','SPFH'};
 elseif contains(ldas_dem_dir,'GLDAS')
-%     ldas.vars ={'TMP','PRES','WIND','SPFH'};
-ldas.var={'Tair_f_inst','Psurf_f_inst',...
+    ldas.var={'Tair_f_inst','Psurf_f_inst',...
     'Wind_f_inst','Qair_f_inst'};
 %add in radiation if LDAS only
 if LDASOnlyFlag
@@ -115,15 +115,16 @@ if LDASOnlyFlag
 end
 end
 
-
 ldas_topo_names={'Z','aspect','slope'};
 ldas_topo=load_coarse_topo(ldas_dem_file,ldas_topo_names,topo);
 
 %add in CERES data
 % ceres.var_num=[3 4 6]; %incoming sw,lw,and pres
 if ~LDASOnlyFlag
-ceres.var={'sfc_comp_sw-down_all_3h','sfc_comp_lw-down_all_3h',...
-'aux_surfpress_3h'};
+%ceres eliminated the surface pressure variable in ed 4a
+ceres.var={'adj_atmos_sw-down_all_surface_1h','adj_atmos_lw-down_all_surface_1h'};
+% ceres.var={'sfc_comp_sw-down_all_3h','sfc_comp_lw-down_all_3h',...
+% 'aux_surfpress_3h'};
 ceres.ceres_dir=ceres_dir;
 ceres_topo=load_coarse_topo(ceres_topofile,ldas_topo_names,topo);
 else

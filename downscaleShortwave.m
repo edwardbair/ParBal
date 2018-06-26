@@ -1,11 +1,10 @@
 function [F,B,FinZ,BinZ,albedo,presZ,T_Z] = downscaleShortwave(...
-    datevalUTC,pres_a,pres_b,T,Gin,gldas_topo,topo,mode,opt_input)
+    datevalUTC,pres,T,Gin,gldas_topo,topo,mode,opt_input)
 % Calculates incoming shortwave radiation for debris cover
 %INPUT
 % datevalUTC - UTC mat datetime
-% pres_a - coarse pressure from main source (ie GLDAS) in kPa, reprojected to fine scale
-% pres_b - coarse pressure from 2ndary source (ie CERES) in kPa, also reprojected to fine
-% scale
+% pres - coarse pressure from main source (ie GLDAS) in kPa, 
+% reprojected to fine scale
 % T - coarse temperature in K, "
 % Gin - coarse incoming global shortwave, "
 % gldas topo - topo structure for g/n ldas
@@ -34,7 +33,7 @@ lapse=-0.0065;% deg K/m
 % Adjust air temperature from reference to fine using standard lapse
 T_Z = T + (Zdiff.*lapse);
 % Pressure at elevation adjusted with lapse and temp
-presZ = elevationPressure(pres_a,lapse,Zdiff,T);
+presZ = elevationPressure(pres,lapse,Zdiff,T);
 fineTSA  = TopoSunAngle(datevalUTC,topo,presZ,T_Z);
 
 switch mode
@@ -43,7 +42,8 @@ switch mode
         grain_size=opt_input{2};
         deltavis=opt_input{3};
         %albedo calculation
-        albedo=broadbandSnowAlbedo(grain_size,acosd(fineTSA.mu));
+%         albedo=broadbandSnowAlbedo(grain_size,acosd(fineTSA.mu));
+        albedo=scagd_albedo(grain_size.*1000,fineTSA.mu);
         albedo=albedo-deltavis/2;
     otherwise
         albedo=opt_input;
@@ -83,12 +83,11 @@ else
     % or Gin0s>exoflux, set NaN to nanmedian tau0f
     tau(isnan(tau))=nanmedian(tau(:));
     % Adjust optical depth to elevation using pressure   
-    % note ratio change to account for use of CERES pressure
-    tauZ=(presZ./pres_b).*tau;
+    tauZ=(presZ./pres).*tau;
     % Beam at elevation
     BinZ = fineTSA.mu0.*S0.*exp(-tauZ.*fineTSA.airmass);
     % diffuse is obtained from an empirical formulation
-    FinZ = diffuseAtElevation_modis(Fin,tau,pres_a,fineTSA.mu0,tauZ,presZ);
+    FinZ = diffuseAtElevation_modis(Fin,tau,pres,fineTSA.mu0,tauZ,presZ);
 end
 
 % Adjust for topography
@@ -96,7 +95,8 @@ BinT=fineTSA.mu./fineTSA.mu0.*BinZ;
 FinT=FinZ.*topo.view;
 
 % add reflected radiation into diffuse before veg. correction
-% terrain config. factor, Dozier and Frew [1990]; Dubayah and Loechel [1997] Eq. 3 
+% terrain config. factor, Dozier and Frew [1990]; 
+%Dubayah and Loechel [1997] Eq. 3 
 Ct=(1+cosd(topo.slope))./2-topo.view;
 %surrounding terrain
 RinT=Ct.*albedo.*(FinT.*(1-topo.view)+BinT);

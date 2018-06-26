@@ -13,10 +13,12 @@ function downscale_energy(sFileDay,sFile,topofile,landcoverfile,...
 % ldas_dem_file - path to h5 or mat ldas dem
 % ceres_dir - base path to ceres files
 % ceres_topofile - path to ceres topofile (mat - h5 not implemented yet)
-% fast flag - true - only solve for M; false - solve for all outputs; only set for 'normal'
+% fast flag - true - only solve for M; false - solve for all outputs; 
+% only set for 'normal'
 % outdir - path to write out files, must already be created
 % optional - boolean flag for LDAS only mode (true) - normally assume false and run w/ LDAS
 % + CERES. If false, all other CERES inputs are ignored
+% boolean flag for outputting metvars
 numarg=7;
 
 if isdeployed && nargin~=numarg
@@ -39,12 +41,18 @@ addRequired(p,'outdir',validationFcn)
 
 LDASOnlyFlag=false;
 addOptional(p,'LDASOnlyFlag',@islogical);
-if nargin==11
+if nargin>=11
     LDASOnlyFlag=varargin{1};
 end
 
+metvars_flag=false;
+addOptional(p,'metvars_flag',@islogical);
+if nargin==12
+    metvars_flag=varargin{2};
+end
+
 parse(p,sFileDay,sFile,topofile,landcoverfile,ldas_dir,ldas_dem_file,...
-    ceres_dir,ceres_topofile,outdir,LDASOnlyFlag)
+    ceres_dir,ceres_topofile,outdir,LDASOnlyFlag,metvars_flag)
 
 
 % variables
@@ -60,4 +68,4 @@ end
 
 %run downscaling
 daily_melt(dateval,ldas,ceres,topo,ldas_topo,ceres_topo,...
-    tz,FOREST,sFile,outfile,fast_flag,LDASOnlyFlag)
+    tz,FOREST,sFile,outfile,fast_flag,LDASOnlyFlag,metvars_flag)

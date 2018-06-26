@@ -1,10 +1,12 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%% EXTRACT GRiB RECORD %%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% EXTRACT GRiB RECORD %%%%%%%%%%%%%%%
+%
+% 08 Feb 2007 : added check for thinned/reduced GG's
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 function [pds_struct,gds_struct,bms_struct,bds_struct,dataarray]=...
          extract_grib(fid,nrec,fpos,headerskip,dataskip)
-global ParamTable Parameter_Table
-
 
 % read section 1, the PDS (Product Definition Section)
 oct1to3=fread(fid,3);
@@ -48,8 +50,15 @@ if ~dataskip
    decimal_sf=10^(-pds_struct.DecSF);
    bin_sf=2^(bds_struct.bsfE);
    if isfield(gds_struct,'Ni')
-      nxny=gds_struct.Ni*gds_struct.Nj; % Gaussian, etc, Grids
-   else
+      % 08 Feb 2007 : added check for thinned/reduced GG's
+      if isfield(gds_struct,'NxNy')
+         nxny=gds_struct.NxNy;
+      else
+         nxny=gds_struct.Ni*gds_struct.Nj; % Gaussian, etc, Grids
+      end
+   elseif isfield(gds_struct,'J') & isfield(gds_struct,'K')
+         nxny=gds_struct.J*gds_struct.K; % Spher. Harm. Coeffs
+    else
       nxny=gds_struct.Nx*gds_struct.Ny; % Lambert Grids, etc.
    end
    fac1=decimal_sf*bds_struct.RefVal;

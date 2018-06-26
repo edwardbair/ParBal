@@ -1,5 +1,5 @@
 function dailyEnergy(topo,gldasInterp,gldas_topo,ceresInterp,...,
-    ceres_topo,fast_flag,mode,outfile,varargin)
+    ceres_topo,fast_flag,metvars_flag,mode,outfile,varargin)
 % Calls daily radiation downscaling functions for each hour, then returns
 % energy fluxes
 
@@ -11,6 +11,8 @@ function dailyEnergy(topo,gldasInterp,gldas_topo,ceresInterp,...,
 % ceresInterp - Hourly interpolated CERES data
 % ceres_topo - ceres topo struct
 % fast flag - true - only solve for M; false - solve for all outputs; only set for 'normal'
+% metvars_flag - true - output hourly met vars, false - don't output hourly
+% metvars
 % mode - either 'normal', 'debris', or 'debris_depth with normal for snow/icemelt and
 % debris for icemelt under debris (uses daily averages), and 'debris_depth' to solve for debris
 % depth
@@ -32,6 +34,16 @@ function dailyEnergy(topo,gldasInterp,gldas_topo,ceresInterp,...,
 %   G - daily averaged debris cover melt, W/m^2 (should be averaged
 % for 'debris_depth'
 %   G,d - debris cover depth, mm 
+% then met vars if metvars_flag=true
+% 'directZ' - flat surface direct sw, w/m^2
+% 'diffuseZ' - flat surface diffuse sw, w/m^2
+% 'LinZ' - flat surface incoming longwave, w/m^2
+% 'presZ' - air pressure, mb
+% 'albedo' - albedo, percent
+% 'windspd' - wind speed, m/s *10
+% 'Ta' - air temp, K * 10
+% 'Td' - dew point temp, K * 10
+% 'ea' - vapor pressure of air, mb
 
 switch mode
     case 'normal'
@@ -58,9 +70,9 @@ switch mode
         end      
         sw_opt_input(1:3)={FOREST,grain_size,deltavis};
         ebalance_opt_input=FOREST;
-        %save diagnostic variables for Sierra but not for other regions
-        if contains(topo.topofile,'Sierra','IgnoreCase',true)
-            savevars={'M','directZ','diffuseZ','LinZ','presZ','albedo','sensible','latent','windspd','Ta'};
+        if metvars_flag
+            savevars={'M','directZ','diffuseZ','LinZ','presZ','albedo',...
+                'windspd','Ta','Td','ea'};
         else
             savevars={'M'};
         end
@@ -87,44 +99,59 @@ end
 num_times=length(gldasInterp.datevalsUTC);
 sizes=[topo.hdr.RasterReference.RasterSize num_times];
 %determine whether NLDAS or GLDAS based on windfields
-windflag=false;
+gldasflag=false;
 if isfield(gldasInterp,'Wind_f_inst')
-    windflag=true;
+    gldasflag=true;
 end
-M = zeros(sizes,'single');
-Lin = zeros(sizes,'single');
-LinZ = zeros(sizes,'single');
-Lout = zeros(sizes,'single');
-Ta = zeros(sizes,'single');
-diffuse = zeros(sizes,'single');
-direct = zeros(sizes,'single');
-diffuseZ = zeros(sizes,'single');
-directZ = zeros(sizes,'single');
-presZ = zeros(sizes,'single');
-albedo= zeros(sizes,'single');
-sensible = zeros(sizes,'single');
-latent = zeros(sizes,'single');
-windspd = zeros(sizes,'single');
-G = zeros(sizes,'single');
-Tsfc = zeros(sizes,'single');
-opt_output = zeros(sizes,'single');
+out.M = zeros(sizes,'single');
+out.Lin = zeros(sizes,'single');
+out.LinZ = zeros(sizes,'single');
+out.Lout = zeros(sizes,'single');
+out.Ta = zeros(sizes,'single');
+out.diffuse = zeros(sizes,'single');
+out.direct = zeros(sizes,'single');
+out.diffuseZ = zeros(sizes,'single');
+out.directZ = zeros(sizes,'single');
+out.presZ = zeros(sizes,'single');
+out.albedo= zeros(sizes,'single');
+out.sensible = zeros(sizes,'single');
+out.latent = zeros(sizes,'single');
+out.windspd = zeros(sizes,'single');
+out.G = zeros(sizes,'single');
+out.Td = zeros(sizes,'single');
+out.ea = zeros(sizes,'single');
+out.Tsfc = zeros(sizes,'single');
+out.opt_output = zeros(sizes,'single');
+windS = struct();
 
 % clean up input names
-
-in.pres=gldasInterp.Psurf_f_inst./1000; %Pa to KPa
-in.Ta=gldasInterp.Tair_f_inst; %Air temp, K
-in.Q=gldasInterp.Qair_f_inst; %specific humidity, Kg/Kg
-if LDASOnlyFlag
-    in.sw=gldasInterp.SWdown_f_tavg;% Downward short-wave radiation flux W m-2
-    in.lw=gldasInterp.LWdown_f_tavg;% Downward long-wave radiation flux W m-2
-    in.aux_pres=in.pres; % no need for aux pres
-    ceres_topo.Zdiff=gldas_topo.Zdiff;
-else
-    in.sw=ceresInterp.sfc_comp_sw_down_all_3h;
-    in.lw=ceresInterp.sfc_comp_lw_down_all_3h;
-    in.aux_pres=ceresInterp.aux_surfpress_3h./10; %hPa to kPa
+if gldasflag %gldas name
+    in.pres=gldasInterp.Psurf_f_inst./1000; %Pa to KPa
+    in.Ta=gldasInterp.Tair_f_inst; %Air temp, K
+    in.Q=gldasInterp.Qair_f_inst; %specific humidity, Kg/Kg
+else %nldas names 
+   in.pres=gldasInterp.PRES./1000; %Pa to KPa
+   in.Ta=gldasInterp.TMP; %Air temp, K
+   in.Q=gldasInterp.SPFH; %specific humidity, Kg/Kg 
 end
     
+if LDASOnlyFlag
+    in.sw=gldasInterp.SWdown_f_tavg;% Downward shortwave radiation flux W m-2
+    in.lw=gldasInterp.LWdown_f_tavg;% Downward longwave radiation flux W m-2
+    ceres_topo.Zdiff=gldas_topo.Zdiff;
+else
+    %ceres eliminated the surface pressure variable in ed 4a
+in.sw=ceresInterp.adj_atmos_sw_down_all_surface_1h;
+in.lw=ceresInterp.adj_atmos_lw_down_all_surface_1h;
+% ceres.var={'sfc_comp_sw-down_all_3h','sfc_comp_lw-down_all_3h',...
+% 'aux_surfpress_3h'};
+%     in.sw=ceresInterp.sfc_comp_sw_down_all_3h;
+%     in.lw=ceresInterp.sfc_comp_lw_down_all_3h;
+    %ceres stopped supplying pressure w/ ed 4a
+%     in.aux_pres=ceresInterp.aux_surfpress_3h./10; %hPa to kPa
+    
+end
+
 %hourly
 for h=1:num_times
     UTCstring=datestr(gldasInterp.datevalsUTC(h),'yyyy-mm-dd HH:MM');
@@ -133,7 +160,6 @@ for h=1:num_times
         out.albedo(:,:,h),out.presZ(:,:,h),out.Ta(:,:,h)] = ...
         downscaleShortwave(gldasInterp.datevalsUTC(h),...
         in.pres(:,:,h),...
-        in.aux_pres(:,:,h),...
         in.Ta(:,:,h),...
         in.sw(:,:,h),...
         gldas_topo,topo,mode,sw_opt_input);
@@ -141,8 +167,7 @@ for h=1:num_times
         %create wind structure depending on whether its GLDAS (speed only)
         %or NLDAS (U&V)
         %needed for parfor loop
-        windS = struct();
-    if ~windflag
+    if ~gldasflag
         windS.U=gldasInterp.UGRD(:,:,h);
         windS.V=gldasInterp.VGRD(:,:,h);
         windS.windflag=false;
@@ -153,7 +178,8 @@ for h=1:num_times
     %solve the energy balance
         [out.M(:,:,h),out.Tsfc(:,:,h),out.Lin(:,:,h),out.LinZ(:,:,h),...
             out.Lout(:,:,h),out.sensible(:,:,h),out.latent(:,:,h),...
-            out.G(:,:,h),out.windspd(:,:,h),out.opt_output(:,:,h)]=...
+            out.G(:,:,h),out.windspd(:,:,h),out.Td(:,:,h),out.ea(:,:,h),...
+            out.opt_output(:,:,h)]=...
             run_ebalance(floor(gldasInterp.datevalsLocal(1)),...
             in.lw(:,:,h),...
             in.Q(:,:,h),...
@@ -213,6 +239,10 @@ switch svar
         m.(svar)=int16(out.(svar).*10); %deg K * 10
     case 'windspd'
         m.(svar)=int16(out.(svar).*10); %m/sec * 10
+    case 'ea'
+        m.(svar)=int16(out.(svar).*10); %mb
+    case 'Td'
+        m.(svar)=int16(out.(svar).*10); %deg K * 10
     otherwise
         m.(svar)=int16(out.(svar));
 end

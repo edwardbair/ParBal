@@ -17,9 +17,9 @@ while nope
 	 % GRIB marker found
 
 	 if ScreenDiag
-     	    str=sprintf('GRiB Record marker "GRIB" found at chars %d-%d',...
+     	    str=sprintf('  GRiB Record marker "GRIB" found at chars %d-%d',...
      			ftell(fid)-3,ftell(fid));
-     	    %disp(str);
+     	    disp(str);
 	 end
 	 iret=ftell(fid);
 	 break

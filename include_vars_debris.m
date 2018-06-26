@@ -31,8 +31,10 @@ ldas_topo=load_coarse_topo(ldas_topofile,ldas_topo_names,topo);
 
 %add in CERES data
 % ceres.var_num=[3 4 6]; %incoming sw,lw,and pres
-ceres.var={'sfc_comp_sw-down_all_3h','sfc_comp_lw-down_all_3h',...
-'aux_surfpress_3h'};
+%ceres eliminated the surface pressure variable in ed 4a
+ceres.var={'sfc_comp_sw-down_all_3h','sfc_comp_lw-down_all_3h'};
+% ceres.var={'sfc_comp_sw-down_all_3h','sfc_comp_lw-down_all_3h',...
+% 'aux_surfpress_3h'};
 ceres.ceres_dir=ceres_dir;
 ceres_topo=load_coarse_topo(ceres_topofile,ldas_topo_names,topo);
 end

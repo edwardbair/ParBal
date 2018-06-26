@@ -1,5 +1,5 @@
 function grib_struct=read_grib(gribname,irec,varargin)
-%READ_GRIB read certain WMO GRiB-formatted binary data files (V1.4.0 - Sep 2005)
+%READ_GRIB read certain WMO GRiB-formatted binary data files (Revision 3 - Feb 2010)
 % READ_GRIB reads certain WMO GRiB-formatted binary data files 
 %
 %  Inputs: The first 2 arguments are required:
@@ -20,7 +20,7 @@ function grib_struct=read_grib(gribname,irec,varargin)
 %          DataFlag   - (0|1) return decoded BDS if==1 (default=1).  The data for 
 %                       the parameter is stored in the .fltarray field of the structure.
 %          ScreenDiag - (0|1) control diagnostics to screen (default=1)
-%          ParamTable - ('NCEPOPER'|'NCEPREAN'|'ECMWF128'|'ECMWF160') selects the parameter 
+%          ParamTable - ('NCEPOPER'|'NCEPREAN'|'ECMWF128'|'ECMWF160'|'ECMWF140') selects the parameter 
 %                       table to use for matching kpds6 number to the correct parameter 
 %                       name. (default='NCEPOPER')
 %
@@ -34,14 +34,14 @@ function grib_struct=read_grib(gribname,irec,varargin)
 %
 
 % Written by Brian Blanton
+%            Renaissance Computing Institute
 %            Uni. of North Carolina at Chapel Hill
-%            Dept of Marine Sciences
 %            Chapel Hill, NC, USA
-%            brian_blanton@unc.edu
+%            brian_blanton@renci.org
 %
 %            The decoding of the GRiB BDS is done with mex files that use code
 %            from wgrib by Wesley Ebisuzaki at NCEP (http://wesley.wwb.noaa.gov).
-%            ibm2flt -->> ibm2fltmex5.c  and BDSunpk -->> BDS_unpack_mex5.c
+%            BDSunpk -->> BDS_unpack_mex5.c
 %
 % HISTORY: Version 1.2 (Sep 2002):
 %             BOB:    pre-2002: first writing
@@ -52,27 +52,42 @@ function grib_struct=read_grib(gribname,irec,varargin)
 %                               See comments in INT2. 
 %                               Also fixed "Help" code.
 %          Version 1.3 (Jun 2003)
-%             BOB: 01 Jun 2003: added varargin's, generalized parameter table code, 
+%             BOB: 01 Jun 2003: added varargins, generalized parameter table code, 
 %                               added ECMWF 128,160, and NCEPOPER tables.
 %          Version 1.3.1 (11 Nov 2003)
 %             BOB: 11 Nov 2003: fixed bug in HeaderFlag varargin
 %          Version 1.4.0 (1 Sep 2005)
-%             BOB: 01 Apr 2004: Added gds tables for more Data Representation Types (DRT)
-%          Version 1.4.1 (5 Apr 2007)
-%             TDS: 05 Apr 2007: Added NCEP optional table redefinition of Table 2
-%                               (Table versions 128 and 129)
-%          Version 1.4.2 (4 Jan 2008)
-%             TDS: 04 Jan 2008: Added GRiB-2 processing via external routine read_grib2.m and wgrib2
-%          Version 1.5 (20 Mar 2009)
-%             TDS: 20 Mar 2009: Various bugfixes, mostly for WAVEWATCH III
+%             BOB: 01 Sep 2005: Added gds tables for more Data Representation Types (DRT)
+%          Version 1.4.3 (6 Nov 2008)
+%             BOB: 06 Nov 2008: Added gds for Polar Stereographic grids (DRT)
+%          Version 1.4.4 (20 Nov 2008)
+%             BOB: 20 Nov 2008: Fixed handling of garbage in between grib records
+%                               Fixed handling of year/century        
+%
+%          Mid-Jun 2009 : moved code to SVN repo.  1.4.4 corresponds to revision 1.  
+%          Revision 2: added comments
+%          Revision 3: Replaced undef value of 10e20 with NaN, within BDS_unpack_mex5.c
+%          Revision 4 (16 Apr 2012): Added ECMWF140 parameter table, provided by Jesus Portilla; 
+%                                    fixed global var problem in gribhelp
+%
+%%
 % 
 
-global rgversion rgversiondate ParamTable Parameter_Table
-rgversion='1.4.2';
-rgversiondate=datenum(2008,1,4);
 
+global rgversion rgversiondate ParamTable
+%ParamTable='NCEPOPER';
+% ParamTable='gribtab_GLDAS_NOAH_sorted';
+ParamTable='NCEPREAN';
+rgversion='r4';
+rgversiondate=datenum(2012,4,16);
 if nargin==0,gribhelp('mainhelp');return,end
-if nargin==1,gribhelp(gribname);return,end
+if nargin==1
+    if ~isempty(gribname) % assume its a help arg or a grib file name for inventory
+        gribhelp(gribname) 
+        return
+    end
+    irec=-1;
+end
 
 %if nargin~=5,error('READ_GRIB must have 0|4 input arguments'),end
 
@@ -81,22 +96,20 @@ if isempty(gribname)
    if fname==0,return,end
    gribname=[fpath fname];
 else
-   %[fpath,fname,fext,fver]=fileparts(gribname);Karl edited to remove warn
    [fpath,fname,fext]=fileparts(gribname);
    fname=[fname fext];
 end
 
-irec_in=irec; %hold for read_grib2
-
 inventory_flag=0;
 select_by_param=0;
+irect=[];
 if isempty(irec)
    irec=-1;
 elseif iscell(irec)
    select_by_param=1;
    params_to_get=irec;
    irec=-1;
-elseif isstr(irec)
+elseif ischar(irec)
    if strncmp(lower(irec),'inv',3)
       inventory_flag=1;
       ScreenDiag=0;
@@ -120,10 +133,9 @@ end
 % Default propertyname values
 HeaderFlag=1;
 DataFlag=1;
-ScreenDiag=1;
-ParamTable='NCEPOPER';
+%global ScreenDiag
+ScreenDiag=0;
 
-varargin_in=varargin;
 
 % Process propertyname/value pairs 
 k=1;
@@ -149,7 +161,7 @@ while k<length(varargin),
       varargin([k k+1])=[];
     case 'paramtable',
       ParamTable=varargin{k+1};
-      if ~(any(strcmp(ParamTable,{'NCEPOPER','ECMWF160','NCEPREAN','ECMWF128'})))
+      if ~(any(strcmp(ParamTable,{'NCEPOPER','ECMWF160','NCEPREAN','ECMWF128','ECMWF140'})))
          error('Invalid Parameter Table to READ_GRIB.')
       end
       varargin([k k+1])=[];
@@ -157,6 +169,11 @@ while k<length(varargin),
       k=k+2;
   end
 end
+
+% Initialize parameter table 
+%global Parameter_Table  
+Set_Parameter_Table(ParamTable);
+
 
 % Open GRiB file and Find first 'GRIB' string
 fid=fopen(gribname,'r');
@@ -168,8 +185,9 @@ if ~is_grib_file(fid,ScreenDiag)
    % No first GRiB marker found. Abort.
    disp('ERROR: READ_GRIB:')
    disp([gribname ' is not a GRiB file.'])
-   disp('No GRiB marker "GRIB" found in file.')
+   disp(['No GRiB marker "GRIB" found in file.'])
    grib_struct=-1;
+   fclose(fid);
    return
 else
    mark1=ftell(fid);
@@ -182,16 +200,16 @@ else
    end
    % Report pre-firstmarker header if length <= 90
    if(mark1<91)
-      %if ScreenDiag,disp(['GRiB header = ' char(gribfileheader')]);end
+      if ScreenDiag, disp(sprintf('GRiB header = %s',char(gribfileheader'))),end
    else
       % Reposition fid to point just before "G" char
-      fseek(fid,-4,0);
+%      fseek(fid,-4,0);
    end
+   fseek(fid,-4,0);
 end
 
 first4octets=fread(fid,4);
-% if ScreenDiag,
-% disp(char(first4octets'));end
+if ScreenDiag,disp(char(first4octets'));,end
 
 if inventory_flag
    inventory_str=sprintf('###################################################\n');
@@ -207,10 +225,11 @@ if inventory_flag
 end
 
 % initialization
-grec=0;crec=0;
+grec=0;
+crec=0;
 fpos=ftell(fid);
 
-Set_Parameter_Table(ParamTable);
+StopAtRecNumber=max(irec);
 
 % Each record in a GRiB file contains sections 0-5, possibly with 
 % sections 2,3 (GDS,BMS) omitted.  Basically, each GRIB record 
@@ -218,30 +237,49 @@ Set_Parameter_Table(ParamTable);
 % and definitions of the model grid, etc.  So the size of the 
 % grib_struct will increase with each new record. 
 
-grib_struct=struct([]);
+grib_struct=[];
 
-while ~isempty(first4octets)
-
-   oct1to4=char(first4octets');
+while ~isempty(first4octets) 
+    
+   if (StopAtRecNumber~=-1  && StopAtRecNumber<=grec), 
+       fclose(fid);
+       break, 
+   end
+    
+    
+   oct1to4=char(first4octets'); %'
 
    % Make sure first 4 octets are "GRIB"
    if ~strcmp(oct1to4,'GRIB')
-   
+      % we've already read in 4 bytes at the end of the loop, looking for
+      % "GRIB", but we could have read in "  GR", for example. So, rewind 4
+      % bytes, and start looking for "GRIB" from there. 
+      fseek(fid,-4,0); 
       % scanning for next grib marker
       iret=find_grib_marker(fid,ScreenDiag);
-      if iret<1 & feof(fid)
+      if iret<1 && feof(fid)
          if ScreenDiag
-	    str=sprintf('\n%s\n',['End of file reached.']);
+	        str=sprintf('\n%s\n',['End of file reached.']);
             disp(str)
-	 end
+	     end
+         if inventory_flag
+             helpwin(inventory_str,'Inventory',['Inventory for ' gribname]);
+         end
+         fclose(fid);
          return
       end
    end      
 
-   grec=grec+1;
+   grec=grec+1;   
+   if (grec>max(irec)) & (irec~=-1)
+       fclose(fid);
+       break
+   end
+
+   
    this_one_extracted=0;
    
-   %if ScreenDiag,fprintf(1,'GRec=%4d : FPos1=%8d',grec,fpos);end
+   if ScreenDiag,fprintf(1,'GRec=%4d : FPos1=%8d',grec,fpos),end
    
    % read section 0, the IS (Indicator Section);
    % this is always extracted
@@ -249,13 +287,13 @@ while ~isempty(first4octets)
    lengrib=bitshift3(oct5to7(1),oct5to7(2),oct5to7(3));
    edition=fread(fid,1);
 
-   % Edition check -- switch to read_grib2 if GRiB2 detected
+   % Edition check
    if edition~=1
       str=sprintf('\n%s\n',['READ_GRIB cannot read edition ' int2str(edition) ' GRiB records.']);
       str=[str sprintf('%s\n',['Edition ' int2str(edition) ' detected at record ' int2str(grec) ' in ' fname]);];
-      %disp(str)
-      %disp('switching to read_grib2... please wait')
-      grib_struct=read_grib2(gribname,irec_in,varargin_in{:});
+      disp(str)
+      grib_struct=[];
+      fclose(fid);
       return
    end
    
@@ -269,9 +307,6 @@ while ~isempty(first4octets)
       lenpds=bitshift3(oct1to3(1),oct1to3(2),oct1to3(3));
       fseek(fid,-3,0);
       pds=fread(fid,lenpds);
-      if strcmp(ParamTable,'NCEPOPER') && (pds(4) == 128 || pds(4) == 129 || pds(4) == 0)
-        Remap_Parameter_Table(pds(4));
-      end                           
       param=Get_Parameter(pds(9),1);
       if any(strcmp(param,params_to_get))
           %"any(strcmp(param,params_to_get))" equivalent to "ismember(param,params_to_get)"
@@ -292,11 +327,11 @@ while ~isempty(first4octets)
           crec=crec+1;
           irect(find(irect==sirect(crec)))=[];
       end
-  end
-  
+   end
+    
   if headerskip & dataskip
       % Skip GRiB record, except for '7777' delimiter at end;
-      % We've already read in 8 octets!!
+      % We''ve already read in 8 octets!!
       fseek(fid,lengrib-12,0);
    else
       [pds_struct,gds_struct,bms_struct,bds_struct,dataarray]=...
@@ -313,7 +348,7 @@ while ~isempty(first4octets)
       grib_struct(crec).parameter=pds_struct.parameter;
       grib_struct(crec).layer=temp3;
       grib_struct(crec).units=pds_struct.units;
-      dtime=datenum(2000+pds_struct.year,pds_struct.month,pds_struct.day,pds_struct.hour,pds_struct.min,00);
+      dtime=datenum(pds_struct.year,pds_struct.month,pds_struct.day,pds_struct.hour,pds_struct.min,00);
       grib_struct(crec).stime=datestr(dtime);
       % 14 Jun 2002: BOB: added level to output struct
       grib_struct(crec).level=levels(pds_struct.pdsvals(10),pds_struct.pdsvals(11),pds_struct.pdsvals(12));
@@ -325,31 +360,40 @@ while ~isempty(first4octets)
       grib_struct(crec).fltarray=dataarray;
       this_one_extracted=1;
       if inventory_flag
-         clear grib_struct;
-         crec=0;  % Reset structure logging
-	 minute=['0' int2str(pds_struct.min)];
-	 if pds_struct.min>9,minute=int2str(pds_struct.minute);end
-	 hour=['0' int2str(pds_struct.hour)];
-	 if pds_struct.hour>9,hour=int2str(pds_struct.hour);end
-	 day=['0' int2str(pds_struct.day)];
-	 if pds_struct.day>9,day=int2str(pds_struct.day);end
-	 month=['0' int2str(pds_struct.month)];
-	 if pds_struct.month>9,month=int2str(pds_struct.month);end
-         level=levels(pds_struct.pdsvals(10),pds_struct.pdsvals(11),pds_struct.pdsvals(12));
-	 l=length(level);lm=floor(l/2);ll=1:lm;lr=lm+1:l;
-	 level_left=level(ll);level_right=level(lr);
-	 inventory_str=[inventory_str sprintf(...
-	            '%4d    %3d %6s  %-14s  %2d%2d/%2s/%2s %2s %2s %5.1f %5.1f %-16s %9s%-9s  %10s %10s %-s\n',...
-	            grec,...
-		    pds_struct.pdsvals(9),...
-		    pds_struct.parameter,...
-		    pds_struct.units,...
-	            pds_struct.century-1,...
-		    pds_struct.year,...
-		    month,day,hour,minute,...
-		    pds_struct.P1,pds_struct.P2,pds_struct.TRI,level_left,level_right,...
-		    pds_struct.IC,gds_struct.DRT(1:8),...
-		    pds_struct.description)];
+          %clear grib_struct;
+          crec=0;  % Reset structure logging      
+          level=levels(pds_struct.pdsvals(10),pds_struct.pdsvals(11),pds_struct.pdsvals(12));
+          l=length(level);lm=floor(l/2);ll=1:lm;lr=lm+1:l;
+          level_left=level(ll);
+          level_right=level(lr);
+          %           inventory_str=[inventory_str sprintf(...
+          %               '%4d    %3d %6s  %-14s  %2d%2d/%2s/%2s %2s %2s %5.1f %5.1f %-16s %9s%-9s  %10s %10s %-s\n',...
+          %               grec,...
+          %               pds_struct.pdsvals(9),...
+          %               pds_struct.parameter,...
+          %               pds_struct.units,...
+          %               pds_struct.century-1,...
+          %               pds_struct.year,...
+          %               month,day,hour,minute,...
+          %               pds_struct.P1,pds_struct.P2,pds_struct.TRI,level_left,level_right,...
+          %               pds_struct.IC,gds_struct.DRT(1:8),...
+          %               pds_struct.description)];
+          inventory_str=[inventory_str sprintf(...
+              '%4d    %3d %6s  %-14s  %4d/%02d/%02d %02d %02d %5.1f %5.1f %-16s %9s%-9s  %10s %10s %-s\n',...
+              grec,...
+              pds_struct.pdsvals(9),...
+              pds_struct.parameter,...
+              pds_struct.units,...
+              pds_struct.year,...
+              pds_struct.month,pds_struct.day,pds_struct.hour,pds_struct.min,...
+              pds_struct.P1,...
+              pds_struct.P2,...
+              pds_struct.TRI,...
+              level_left,...
+              level_right,...
+              pds_struct.IC,...
+              gds_struct.DRT(1:8),...
+              pds_struct.description)];
       end
    end   
    
@@ -360,34 +404,63 @@ while ~isempty(first4octets)
    % Get file pointer position 
    fpos=ftell(fid);
    if ScreenDiag
-      %fprintf(1,' : GLen=%8d : FPos2=%8d : EOGRiB=%4s',lengrib,fpos,end_grib_delim);
+      fprintf(1,' : GLen=%8d : FPos2=%8d : EOGRiB=%4s',lengrib,fpos,end_grib_delim)
       if ~this_one_extracted
-         %fprintf(1,'\n');
+         fprintf(1,'\n')
       else
-         %fprintf(1,' ***\n');
+         fprintf(1,' Extracted\n')
       end
-
    end
+   
    if ~strcmp(end_grib_delim,'7777')
-      disp(['Alignment problem reading GRiB message ' gribname])
-      disp(['at GRiB record number ' int2str(grec)])
-      disp('Should be at the end of GRiB record, and we''re  not.')
+      fprintf('Alignment problem reading GRiB message.', gribname)
+      disp(sprintf('at GRiB record number ', int2str(grec)))
+      disp('Should be at the end of GRiB record, and we''re not.')
       disp('Returning from READ_GRIB with GRiB up to this point.')
-      return
-%BOB      error('read_grid alignment problem a')   
+      fclose(fid);
+      break
    end
+   
    
    % Read the next 4 octets, which SHOULD be the beginning of the next GRIB record
    first4octets=fread(fid,4);
+   temp=char(first4octets');
+   if isempty(temp)
+      if ScreenDiag
+         fprintf('   Next 4 octets is empty.  Assuming end of file.\n');
+         fprintf('   %d records were scanned.\n',grec)
+      end
+   elseif ~strcmp(temp,'GRIB')
+      if ScreenDiag
+         fprintf('   Next 4 octets (%s) is NOT beginning of next grib.\n ',temp)
+      end
+   end
+   
 end
 
-if exist('irecsort'),grib_struct=grib_struct(irecsort);end
+if isempty(grib_struct)
+    fclose(fid);
+    return
+end
+
+if exist('irecsort'),grib_struct=grib_struct(irecsort);,end
+
 if inventory_flag
       helpwin(inventory_str,'Inventory',['Inventory for ' gribname]);
       grib_struct=[];
 end
 
+% Permute if needed
+%if exist('irecsort')
+%   grib_struct=grib_struct(irecsort);
+%end
+
+
 % close grib stream
 fclose(fid);
-
+%disp(' ')
 return
+
+
+
+

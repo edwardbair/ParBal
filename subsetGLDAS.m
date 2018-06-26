@@ -17,7 +17,7 @@ gldastmp=cell(length(vars),1);
 % sca=GetEndmember(sFile,'snow',floor(GLDAS.datevalsLocal(1)));
 mask=repmat(mask,[1 1 len]);
 % for i=1:length(vars);
-parfor i=1:length(vars);
+parfor i=1:length(vars)
     t=reprojectRaster(GLDAS.(vars{i}),coarseRefMat,...
         [],fine_dem_hdr.ProjectionStructure,'rasterref',...
         fine_dem_hdr.RasterReference,'method','linear');

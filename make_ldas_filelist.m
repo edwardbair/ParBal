@@ -10,17 +10,17 @@ function ldas=make_ldas_filelist(datevalsDay,ldasdir,utc_offset,varargin)
 % output
 % ldas filelist structure
 
-if isempty(varargin);
+if isempty(varargin)
     secondary_flag=false;
 else
     secondary_flag=true;
     secondary_dir=varargin{1};
 end
 
-if ~isempty(regexpi(ldasdir,'NLDAS'));
+if ~isempty(regexpi(ldasdir,'NLDAS'))
     ldastype='NLDAS';
     timestep=1/24; % hourly
-elseif ~isempty(regexpi(ldasdir,'GLDAS'));
+elseif ~isempty(regexpi(ldasdir,'GLDAS'))
     ldastype='GLDAS';
     timestep=3/24; % 3 hr
 else
@@ -32,7 +32,7 @@ ldas=struct('datevalsUTC',[],'datevalsLocal',[],'filenames',[]);
 %utc dates
 datevalsDayUTC=datevalsDay-utc_offset;
 
-for i=1:length(datevalsDay);
+for i=1:length(datevalsDay)
     %datevals within day i, local
     daily_datevals=datevalsDay(i):timestep:datevalsDay(i)+1;%-timestep;
     %datevals within day i, utc
@@ -68,7 +68,6 @@ for i=1:length(datevalsDay);
                 %changed
                 fname=fullfile(subdir,sprintf('*%s*.nc4',datestr(dv_utc,...
                 'yyyymmdd.HHMM')));
-                
               %   fname=fullfile(subdir,sprintf('*%s%03i%s*.grb',...
               %  datestr(daily_datevalsUTCldasInterval(j),'yyyy'),doy,...
               %  datestr(daily_datevalsUTCldasInterval(j),'.HHMM')));
