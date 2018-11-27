@@ -42,7 +42,7 @@ function [M,Tsfc,Lin,LinZ,Lout,sensible,latent,G,Td,ea,opt_out]=...
 % latent, latent heat flux, W/m^2
 % G, conductive heat flux, W/m^2
 % Td, dewpoint temperature, K
-% ea, vapor pressure of air, kPa
+% ea, vapor pressure of air, Pa
 % optional, if mode is 'debris depth'
 % opt_out - d, debris depth, m, NaN otherwise
 

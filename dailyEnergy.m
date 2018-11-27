@@ -234,13 +234,13 @@ switch svar
     case 'albedo' 
         m.(svar)=int8(out.(svar).*100); %0-100 pct
     case 'presZ'
-        m.(svar)=int16(out.(svar).*10); %mb
+        m.(svar)=int16(out.(svar).*10); %(kPa to mb)
     case 'Ta'
         m.(svar)=int16(out.(svar).*10); %deg K * 10
     case 'windspd'
         m.(svar)=int16(out.(svar).*10); %m/sec * 10
     case 'ea'
-        m.(svar)=int16(out.(svar).*10); %mb
+        m.(svar)=int16(out.(svar).*10); %(Pa*10)
     case 'Td'
         m.(svar)=int16(out.(svar).*10); %deg K * 10
     otherwise

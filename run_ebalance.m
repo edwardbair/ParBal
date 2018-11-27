@@ -38,7 +38,7 @@ function [M,Tsfc,Lin,LinZ,Lout,sensible,latent,G,windspd,Td,ea,opt_out] = ...
 % latent - latent heat flux, W/m^2
 % G - conduction, W/m^2
 % Td - dewpoint temp, K
-% ea - vapor pressure air, kPa
+% ea - vapor pressure air, Pa
 % windspd - wind speed, m/s
 % optional output:
 % opt_out - debris depth, m, only for 'debris_depth' mode; NaN otherwise

@@ -199,6 +199,8 @@ parfor d=1:length(datevalsDay)
     cctmp(ind)=1-rawsca(ind);
     sca=rawsca./(1-cctmp);
     sca(rawsca==0)=0;
+    %quick fix for binary fsca
+%     sca(sca>0)=1;
     %load potential melt
     fname=fullfile(energy_dir,[datestr(t,'yyyymmdd'),'.mat']);
     %     [M,MATLABdates]=parload(fname,'M','MATLABdates');
@@ -298,6 +300,9 @@ switch ext
         end
         h5writeProjection(rFile,'/Grid',hdr.ProjectionStructure);
         h5writeatt(rFile,'/','MATLABdates',datevalsDay);
+        %added yyyymmdd attribute for non-MATLAB users
+        h5writeatt(rFile,'/','ISOdates',...
+            strjoin(cellstr(datestr(datevalsDay,'yyyymmdd'))));
         h5writeatt(rFile,'/Grid','ReferencingMatrix',hdr.RefMatrix);
 end
 t=toc;
