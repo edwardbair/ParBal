@@ -44,7 +44,10 @@ switch mode
         %albedo calculation
 %         albedo=broadbandSnowAlbedo(grain_size,acosd(fineTSA.mu));
         albedo=scagd_albedo(grain_size.*1000,fineTSA.mu);
-        albedo=albedo-deltavis/2;
+%         albedo=albedo-deltavis/2;
+        albedo=albedo-deltavis*0.63;
+        %from SMARTS295Main using defaultZSMARTSinput('mlw', 
+        %0.6346 (cosZ=0.6) to 0.6370 (cosZ=1)
     otherwise
         albedo=opt_input;
 end
