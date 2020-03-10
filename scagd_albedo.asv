@@ -1,19 +1,18 @@
 function a=scagd_albedo(r,mu0,varargin)
 %statsitical fit to Jeff Dozier's SCAGD, which is  a MATLAB version of
 %the Warren and Wiscombe (1980) albedo model
-%input r - grain radius (scalar, vector, or matrix), um
-%mu0 - cosine of the solar zenith angle (scalar, vector, or matrix), 0-1
-%optional - 'mlw' (mid-lat. winter @ 3km elevation, default) or
+%input r - grain radius, scalar, vector, or matrix, um
+%mu0 - cosine of the solar zenith angle, scalar, vector, or matrix, 0-1
+%optional - 'mlw' (mid-lat winter @ 3km elevation, default) or
 %'sas' (sub-Arctic summer @ sea level) for atmospheric profile
 %impurities to come later
 %see Bair et al (in review) WRR, submitted 1/2019
-% Ned Bair 2/2019
 
 p = inputParser;
 addRequired(p,'r',@(x) all(x >= 1 & x < 2000,'all'))
 addRequired(p,'mu0',@(x) all(x >= 0 & x <= 1,'all'))
 defaultatm='mlw';
-addOptional(p,'atm',defaultatm,@(s) ischar(s));
+addOptional(p,'atm',defaultatm,@(s) isstring(s));
 parse(p,r,mu0,varargin{:});
 R=p.Results.r;
 M=p.Results.mu0;
@@ -45,3 +44,5 @@ A=(P(1,1).*M.^2+P(1,2).*M+P(1,3))./(M.^2+Q(1,2).*M+Q(1,3));
 B=(P(2,1).*M.^2+P(2,2).*M+P(2,3))./(M.^2+Q(2,2).*M+Q(2,3));
 D=(P(3,1).*M.^2+P(3,2).*M+P(3,3))./(M+Q(3,3));
 a=A.*R.^B+D;
+
+
