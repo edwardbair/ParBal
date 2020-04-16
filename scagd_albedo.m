@@ -10,8 +10,8 @@ function a=scagd_albedo(r,mu0,varargin)
 % Ned Bair 2/2019
 
 p = inputParser;
-addRequired(p,'r',@(x) all(x >= 1 & x < 2000,'all'))
-addRequired(p,'mu0',@(x) all(x >= 0 & x <= 1,'all'))
+addRequired(p,'r',@(x) all((x >= 1 & x < 2000) | isnan(x),'all'))
+addRequired(p,'mu0',@(x) all(x >= 0 & x <= 1 | isnan(x),'all'))
 defaultatm='mlw';
 addOptional(p,'atm',defaultatm,@(s) ischar(s));
 parse(p,r,mu0,varargin{:});

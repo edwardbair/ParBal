@@ -1,7 +1,7 @@
 function lai=make_lai(type, dateval)
 %input: forest type raster where
 % 1 coniferous
-% 2 decduous 
+% 2 deciduous 
 % dateval, matlab datetime
 
 %output lai: leaf area index for two veg types
@@ -37,6 +37,6 @@ fseason=0.0016.*(tmax - tseason).^2;
 lai=zeros(size(type));
 
 ntypes=length(vlai_summer);
-for n=1:ntypes;
+for n=1:ntypes
     lai(type==n)=(1-fseason).*vlai_summer(n) + fseason.*vlai_winter(n);
 end
