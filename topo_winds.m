@@ -1,20 +1,28 @@
-function [u_fine,v_fine]=topo_winds(topo,FOREST,u_coarse,v_coarse,dateval)
+function [u_fine,v_fine,varargout]=topo_winds(topo,FOREST,u_coarse,...
+    v_coarse,dateval,varargin)
 
 % input: topo structure w/ dem and curvature
 %forest structure w/ veg info
 % u_coarse,v_coarse, u and v components of wind speed (m sec^1)
+% optional: slopewt, curvewt,and beta (all 3 must be supplied)
 %output u_fine,v_fine, terrain corrected and downscaled wind speeds to size
-%of dem
+%of dem ,also windspeed and winddir (polar, direction from)
 
 % from Glen Liston's Snowmodel - Micromet Fortran code
 % Liston et al. (2007) Simulating complex snow distrubutions
 % in windy environments.
 % Journal of Glaciology
 
-slopewt=0.58;
-curvewt=0.42;
-beta=0.9;
-
+if nargin==5
+    slopewt=0.58;
+    curvewt=0.42;
+    beta=0.9;
+else
+    slopewt=varargin{1};
+    curvewt=varargin{2};
+    beta=varargin{3};
+end
+    
 %convert aspect to deg from north
 azimuth=180-topo.aspect;
 terrain_slope=topo.slope;
@@ -61,7 +69,9 @@ lai=make_lai(FOREST.type.num_val,dateval);
 
 a=beta.*lai;
 canopy_windwt=exp((-a).*(1.0-(0.6.*FOREST.shd)./FOREST.shd));
-windspd=canopy_windwt.*windspd;
+t=FOREST.shd>0;
+windspd(t)=canopy_windwt(t).*windspd(t);
+windspd(windspd<0)=0;
 
 % fix wind dir according to Ryan (1977)
 dirdiff=zeros(size(azimuth));
@@ -97,5 +107,7 @@ end
 u_fine=-windspd.*sind(winddir);
 v_fine=-windspd.*cosd(winddir);
 
+varargout{1}=windspd;
+varargout{2}=winddir;
 
 
