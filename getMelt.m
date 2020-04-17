@@ -1,4 +1,4 @@
-function [x,hdr]=getMelt(h5file,meltvariable,varargin)
+function [x,hdr,h5mdates]=getMelt(h5file,meltvariable,varargin)
 %reads different melt varibles from h5 files output by
 %reconstructSWE
 %input:
@@ -13,6 +13,7 @@ function [x,hdr]=getMelt(h5file,meltvariable,varargin)
 % x - image or cube of requested variable, corresponding to dates
 % requested
 % hdr - geographic info
+% h5mdates - matdates
 
 if nargin==2
     dflag=false;
@@ -25,11 +26,11 @@ varloc=['/Grid/' meltvariable];
 i=h5info(h5file,varloc);
 sz=i.Dataspace.Size;
 hdr=GetCoordinateInfo(h5file,'/Grid',sz(1:2));
+h5mdates=h5readatt(h5file,'/','MATLABdates');
 
 if ~dflag
     x=h5read(h5file,varloc);
 else
-    h5mdates=h5readatt(h5file,'/','MATLABdates');
     
     if length(matdates)==1 %1 day
        n=find(matdates==h5mdates);

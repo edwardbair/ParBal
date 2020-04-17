@@ -58,7 +58,7 @@ switch mode
         grain_size(grain_size < 10) = 10;
         grain_size(grain_size > 1100) = 1100;
         %convert to mm
-        grain_size=grain_size.*1e-3;
+%         grain_size=grain_size.*1e-3;
         %if the topo hdr doesn't match the fsca hdr, reproject
         if ~isequal(topo.hdr,hdr)
             grain_size=reprojectRaster(grain_size,hdr.RefMatrix,...
@@ -140,15 +140,9 @@ if LDASOnlyFlag
     in.lw=gldasInterp.LWdown_f_tavg;% Downward longwave radiation flux W m-2
     ceres_topo.Zdiff=gldas_topo.Zdiff;
 else
-    %ceres eliminated the surface pressure variable in ed 4a
+
 in.sw=ceresInterp.adj_atmos_sw_down_all_surface_1h;
 in.lw=ceresInterp.adj_atmos_lw_down_all_surface_1h;
-% ceres.var={'sfc_comp_sw-down_all_3h','sfc_comp_lw-down_all_3h',...
-% 'aux_surfpress_3h'};
-%     in.sw=ceresInterp.sfc_comp_sw_down_all_3h;
-%     in.lw=ceresInterp.sfc_comp_lw_down_all_3h;
-    %ceres stopped supplying pressure w/ ed 4a
-%     in.aux_pres=ceresInterp.aux_surfpress_3h./10; %hPa to kPa
     
 end
 

@@ -15,7 +15,7 @@ q_coarse( q_coarse < thresh) = thresh;
 %vapor pressure, Pa, Peixoto and Oort (1996) Eq 3, p 3445
 ea_coarse=q_coarse.*(pres_coarse*1000)/0.622;
 %compute rh
-%assume rh constant between coarse and fine pixels
+%assume rh constant between coarse and fine pixels, P
 rh=ea_coarse./(SaturationVaporPressure(T_coarse,'water')*1000);
 %recalc if any pix below freezing
 if any(T_coarse(:)<=0)

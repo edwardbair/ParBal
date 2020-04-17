@@ -16,8 +16,10 @@ function [F,B,FinZ,BinZ,albedo,presZ,T_Z] = downscaleShortwave(...
 % opt_input
 % for normal
 %     FOREST
-%     grain_size - grain size, mm
-%     deltavis - deltavis from MODSCAG, 0-1
+%     grain_size - grain size, um
+%     dvisflag - boolean,
+%     if true, next input is deltavis - deltavis from MODDRFS, 0-1
+%     if false, next input is dust - dust conc. from SPIRES, ppmw, 0-1000
 % for debris or debris depth
 %     albedo - raster of albedo values of debris, 0-1
 %OUTPUT
@@ -40,11 +42,19 @@ switch mode
     case 'normal'
         FOREST=opt_input{1};
         grain_size=opt_input{2};
-        deltavis=opt_input{3};
-        %albedo calculation
-%         albedo=broadbandSnowAlbedo(grain_size,acosd(fineTSA.mu));
-        albedo=scagd_albedo(grain_size.*1000,fineTSA.mu);
-        albedo=albedo-deltavis/2;
+        dvisflag=opt_input{3};
+        if dvisflag %MODDRFS
+            deltavis=opt_input{4};
+            albedo=spires_albedo(grain_size,fineTSA.mu);
+            albedo=albedo-deltavis*0.63;
+            %from SMARTS295Main using defaultZSMARTSinput('mlw', 
+            %0.6346 (cosZ=0.6) to 0.6370 (cosZ=1)
+        else %SPIRES
+            dust=opt_input{4};
+        %albedo calculation 
+            albedo=AlbedoLookup(grain_size,fineTSA.mu0,fineTSA.mu,...
+                3,'dust',dust*1e-6);
+        end
     otherwise
         albedo=opt_input;
 end

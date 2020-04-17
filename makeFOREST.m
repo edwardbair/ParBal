@@ -47,7 +47,7 @@ FOREST.type.num_val=zeros(size(FOREST.tau));
 FOREST.type.num_val(FOREST.tau==0.60)=1;
 FOREST.type.num_val(FOREST.tau==0.30)=2;
 
-%vegitation snow holding depth (for winds)
+%vegetation snow holding depth (for winds)
 FOREST.shd=zeros(size(FOREST.tau));
 FOREST.shd(FOREST.type.num_val==1)=12;
 FOREST.shd(FOREST.type.num_val==2)=15;
