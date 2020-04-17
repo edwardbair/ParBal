@@ -146,7 +146,7 @@ if ~isempty(watermaskfile)
     [~,~,ext]=fileparts(watermaskfile);
     switch ext
         case '.mat';
-            m=load(watermaskfile,'-regexp','.*watermask.*');
+            m=load(watermaskfile,'-regexp','.*mask.*');
             if isempty(m)
                 error('could not read watermask %s',watermaskfile);
             end

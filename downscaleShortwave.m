@@ -51,9 +51,12 @@ switch mode
             %0.6346 (cosZ=0.6) to 0.6370 (cosZ=1)
         else %SPIRES
             dust=opt_input{4};
-        %albedo calculation 
-            albedo=AlbedoLookup(grain_size,fineTSA.mu0,fineTSA.mu,...
-                3,'dust',dust*1e-6);
+        %albedo calculation
+            albedo=NaN(size(grain_size));
+            t=~isnan(grain_size);
+            albedo(t)=AlbedoLookup(double(grain_size(t)),...
+                double(fineTSA.mu0(t)),double(fineTSA.mu(t)),...
+                3,'dust',double(dust(t))*1e-6);
         end
     otherwise
         albedo=opt_input;

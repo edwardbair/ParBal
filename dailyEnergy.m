@@ -50,25 +50,52 @@ switch mode
         FOREST=varargin{1};
         sFile=varargin{2};
         todays_dateval=floor(gldasInterp.datevalsLocal(1));
+       %check for deltavis 
+       group = findMODISh5group(sFile,'500m');
+       i=h5info(sFile,group);
+       D=i.Datasets;
+       dvisflag=false;ii=1;
+       while ii < length(D) && ~dvisflag
+           if strcmp(D(ii).Name,'deltavis')
+           dvisflag=true;
+           end
+           ii=ii+1;
+       end
+
         %get grain size, in micrometers, for today
         [grain_size,~,hdr]=GetEndmember(sFile,'grain_size',todays_dateval);
-        deltavis=GetEndmember(sFile,'deltavis',todays_dateval);
         % fix min/max grain sizes
         grain_size (grain_size==0)=NaN;
         grain_size(grain_size < 10) = 10;
         grain_size(grain_size > 1100) = 1100;
-        %convert to mm
-%         grain_size=grain_size.*1e-3;
+        %either use deltavis (reflectance,MODDRFS) or dust (ppmw, SPIRES)
+        if dvisflag
+            deltavis=GetEndmember(sFile,'deltavis',todays_dateval);
+        else
+            dust=GetEndmember(sFile,'dust',todays_dateval);
+        end
+
         %if the topo hdr doesn't match the fsca hdr, reproject
         if ~isequal(topo.hdr,hdr)
             grain_size=reprojectRaster(grain_size,hdr.RefMatrix,...
                 hdr.ProjectionStructure,topo.hdr.ProjectionStructure,...
                 'rasterref',topo.hdr.RasterReference);
+            if dvisflag
             deltavis=reprojectRaster(deltavis,hdr.RefMatrix,...
                 hdr.ProjectionStructure,topo.hdr.ProjectionStructure,...
                 'rasterref',topo.hdr.RasterReference);
-        end      
-        sw_opt_input(1:3)={FOREST,grain_size,deltavis};
+            else
+            dust=reprojectRaster(dust,hdr.RefMatrix,...
+               hdr.ProjectionStructure,topo.hdr.ProjectionStructure,...
+               'rasterref',topo.hdr.RasterReference);
+            end
+        end
+        if dvisflag
+            sw_opt_input(1:4)={FOREST,grain_size,dvisflag,deltavis};
+        else
+            sw_opt_input(1:4)={FOREST,grain_size,dvisflag,dust};
+        end
+        
         ebalance_opt_input=FOREST;
         if metvars_flag
             savevars={'M','directZ','diffuseZ','LinZ','presZ','albedo',...
