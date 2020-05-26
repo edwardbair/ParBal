@@ -30,8 +30,7 @@ h5mdates=h5readatt(h5file,'/','MATLABdates');
 
 if ~dflag
     x=h5read(h5file,varloc);
-else
-    
+else 
     if length(matdates)==1 %1 day
        n=find(matdates==h5mdates);
        x=h5read(h5file,varloc,[1 1 n],[sz(1) sz(2) 1]);
@@ -41,6 +40,7 @@ else
             n=find(matdates(i)==h5mdates);
             x(:,:,i)=h5read(h5file,varloc,[1 1 n],[sz(1) sz(2) 1]);
         end
-    end     
+    end
+    h5mdates=matdates;
 end
 
