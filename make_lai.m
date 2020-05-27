@@ -20,9 +20,14 @@ vlai_winter=[2.5 0.5];
 % (J_day = 200).  Then use this to define the seasonal lai
 % variation.
 %compute LAI
+dv=datevec(dateval);
+% 
+% doy_1=datenum([year(dateval) 1 1]);
+% doy_end_yr=datenum([year(dateval) 12 31]);
 
-doy_1=datenum([year(dateval) 1 1]);
-doy_end_yr=datenum([year(dateval) 12 31]);
+doy_1=datenum([dv(1) 1 1]);
+doy_end_yr=datenum([dv(1) 12 31]);
+
 daysinyr=doy_end_yr-doy_1+1;
 doy=floor(dateval)-doy_1+1;
 tmax = 298;
