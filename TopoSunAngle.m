@@ -33,7 +33,9 @@ end
 % sun location
 T.product = 'sun angles';
 T.date = matdate;
-[T.Declination,T.RadiusVector,T.SolarLongitude] = Ephemeris(matdate);
+
+% [T.Declination,T.RadiusVector,T.SolarLongitude] = Ephemeris(matdate);
+[T.Declination,T.RadiusVector,T.SolarLongitude] = EarthEphemeris(matdate);
 
 % lat-lon if geolocated
 switch S.gridtype
