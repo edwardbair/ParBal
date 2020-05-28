@@ -123,9 +123,10 @@ if ~LDASOnlyFlag
 %ceres eliminated the surface pressure variable in ed 4a
 ceres.var={'adj_atmos_sw-down_all_surface_1h',...
         'adj_atmos_lw-down_all_surface_1h'};
-if dateval >= datenum([2018 10 01]) %dash becomes underscore in ed 4.1
-    ceres.var=strrep(ceres.var,'-','_');
-end
+%currently just fixing names in 4.1, see fix41names.m
+% if dateval >= datenum([2018 10 01]) %dash becomes underscore in ed 4.1
+%     ceres.var=strrep(ceres.var,'-','_');
+% end
     
 ceres.ceres_dir=ceres_dir;
 ceres_topo=load_coarse_topo(ceres_topofile,ldas_topo_names,topo);
