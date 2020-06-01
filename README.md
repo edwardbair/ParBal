@@ -3,6 +3,9 @@ Parallel energy balance model
 
 This is the latest version of the Parallel Energy Balance (ParBal) model. Using snow cover and downscaled metereological forcings, it produces daily snow melt and reconstructed snow water equivalent (SWE). Note, the snowmelt is valid year-round, but the SWE is only valid during the ablation season, from its peak (maximum) through melt out.
 
+2001-2019 Sierra data at: ftp://ftp.snow.ucsb.edu/pub/org/snow/products/ParBal/Sierra/
+
+(ftp:// links don't work because of GitHub markdown bug)
 
 References:
 
