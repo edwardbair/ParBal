@@ -5,7 +5,7 @@ This is the latest version of the Parallel Energy Balance (ParBal) model. Using 
 
 2001-2019 Sierra data at: ftp://ftp.snow.ucsb.edu/pub/org/snow/products/ParBal/Sierra/
 
-(ftp:// links don't work because of GitHub markdown bug)
+(ftp:// links don't work because of [GitHub markdown bug](https://github.com/eedeebee/github-markdown-ftp-bug))
 
 References:
 
