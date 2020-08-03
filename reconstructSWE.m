@@ -121,14 +121,14 @@ maxswefile=p.Results.maxswefile;
 if ~isempty(maxswefile)
     [~,~,ext]=fileparts(maxswefile);
     switch ext
-        case '.mat';
+        case '.mat'
             m=load(maxswefile,'-regexp','.*swe.*dates.*');
             if isempty(m)
                 error('could not read maxswefile %s',maxswefile);
             end
             fn=fieldnames(m(1));
             sweR.maxswedates=m.(fn{1});
-        case '.h5';
+        case '.h5'
             try
                 sweR.maxswedates=h5read(maxswefile,'/Grid');
             catch
@@ -145,14 +145,14 @@ watermaskfile=p.Results.watermaskfile;
 if ~isempty(watermaskfile)
     [~,~,ext]=fileparts(watermaskfile);
     switch ext
-        case '.mat';
+        case '.mat'
             m=load(watermaskfile,'-regexp','.*mask.*');
             if isempty(m)
                 error('could not read watermask %s',watermaskfile);
             end
             fn=fieldnames(m(1));
             watermask=m.(fn{1});
-        case '.h5';
+        case '.h5'
             try
                 watermask=h5read(watermaskfile,'/Grid');
             catch
@@ -235,11 +235,11 @@ sca=reshape(sca,vecsize,length(datevalsDay))';
 maxswedates=reshape(sweR.maxswedates,1,vecsize);
 
 %one pixel at every timestep
-parfor k=1:vecsize;
+parfor k=1:vecsize
     melt_vec=single(melt(:,k));
     sca_vec=sca(:,k);
     swe_temp=zeros(length(datevalsDay),1);
-    if maxswedates(k) > 0 && any(sca_vec);
+    if maxswedates(k) > 0 && any(sca_vec)
         % look for contiguous sca pds
         % eliminate spurious zeros in SCA
         %         sca_vec=slidefun(@max,7,sca_vec,'central');
@@ -249,7 +249,7 @@ parfor k=1:vecsize;
         ind=start < maxswedates(k) & finish < maxswedates(k);
         start(ind)=[];
         finish(ind)=[];
-        for h=1:length(start);
+        for h=1:length(start)
             s=start(h);
             f=finish(h);
             % same as cumsum from s to f
@@ -290,8 +290,16 @@ switch ext
                 ChunkSize=sz;
             end
             location=['/Grid/' fn{i}];
+            
+            FillValue=0;
+            
+            if isa(sweR.(fn{i}),'uint16')
+                FillValue=intmax('uint16');
+                sweR.(fn{i})(watermask)=FillValue;
+            end
+            
             h5create(rFile,location,sz,'Deflate',deflateLevel,'ChunkSize',...
-                ChunkSize,'DataType',class(sweR.(fn{i})));
+                ChunkSize,'DataType',class(sweR.(fn{i})),'FillValue',FillValue);
             h5write(rFile,location,sweR.(fn{i}));
             %write mm for units for melt and swe
             if strcmpi(fn{i},'melt') || strcmpi(fn{i},'swe')
