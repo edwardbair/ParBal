@@ -90,7 +90,7 @@ end
 
 %lookup albedo
 
-broadbandAlbedo = F(radius,LAPconc,elevation,cosZ,cosZp);
+broadbandAlbedo = F(double(radius),double(LAPconc),double(elevation),double(cosZ),double(cosZp));
 end
 
 function [ varargout ] = checkSizes( varargin )
