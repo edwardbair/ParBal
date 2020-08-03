@@ -28,6 +28,7 @@ sz=i.Dataspace.Size;
 hdr=GetCoordinateInfo(h5file,'/Grid',sz(1:2));
 h5mdates=h5readatt(h5file,'/','MATLABdates');
 
+info=h5info(h5file,varloc);
 if ~dflag
     x=h5read(h5file,varloc);
 else 
@@ -38,9 +39,13 @@ else
        x=zeros([sz(1) sz(2) length(matdates)]);
         for i=1:length(matdates) %2 or more days
             n=find(matdates(i)==h5mdates);
-            x(:,:,i)=h5read(h5file,varloc,[1 1 n],[sz(1) sz(2) 1]);
+            x(:,:,i)=h5read(h5file,varloc,[1 1 n],[sz(1) sz(2) 1]);           
         end
     end
+
     h5mdates=matdates;
 end
+    t=(x==info.FillValue);
+    x=single(x);
+    x(t)=NaN;
 

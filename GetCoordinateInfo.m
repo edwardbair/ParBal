@@ -18,6 +18,10 @@ catch
     proj = h5readatt(h5file,location2,'mapprojection');
     projLocation = location2;
 end
+if iscell(proj)
+   proj=proj{:}; %problem with char stored as cell in PC
+end
+
 switch proj
     case 'geographic'
         hdr.gridtype = 'geographic';
@@ -39,9 +43,14 @@ switch proj
         mstruct = defaultm(proj);
         for k=1:nFields
             thisfield = info.Attributes(k).Name;
+            
             if ~(strcmpi(thisfield,'mapprojection') ||...
                     strcmpi(thisfield,'referencingmatrix'))
-                mstruct.(thisfield) = info.Attributes(k).Value;
+                v=info.Attributes(k).Value;
+                if iscell(v) % problem with char stored as cell in PC
+                    v=v{:};
+                end
+                mstruct.(thisfield) = v;
             end
         end
         fn = fieldnames(mstruct);
