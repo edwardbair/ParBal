@@ -18,8 +18,9 @@ gldasInterp.datevalsUTC=gldasInterp.datevalsLocal-tz;
 sg=size(gldas.(vars{1}));
 sizea=[sg(1) sg(2) length(gldasInterp.datevalsUTC)];
 
+[X,Y,Z]=meshgrid(1:sizea(2),1:sizea(1),gldas.datevalsUTC);
+[xq,yq,zq]=meshgrid(1:sizea(2),1:sizea(1),gldasInterp.datevalsUTC);
+    
 for i=1:length(vars)
-    [X,Y,Z]=meshgrid(1:sizea(2),1:sizea(1),gldas.datevalsUTC);
-    [xq,yq,zq]=meshgrid(1:sizea(2),1:sizea(1),gldasInterp.datevalsUTC);
     gldasInterp.(vars{i})= interp3(X,Y,Z,gldas.(vars{i}),xq,yq,zq);
 end

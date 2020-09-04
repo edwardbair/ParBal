@@ -20,7 +20,9 @@ function daily_melt(dateval,gldas_filelist,ceres,topo,gldas_topo,ceres_topo,...
 
 [fsca,~,hdr]=GetEndmember(sFile,'snow',dateval);
 %if the topo hdr doesn't match the fsca hdr, reproject
-if ~isequal(topo.hdr,hdr)
+if ~(isequal(hdr.RefMatrix,topo.hdr.RefMatrix) &&...
+            isequal(hdr.RasterReference.RasterSize,...
+            topo.hdr.RasterReference.RasterSize))
     fsca=reprojectRaster(fsca,hdr.RefMatrix,hdr.ProjectionStructure,...
         topo.hdr.ProjectionStructure,'rasterref',topo.hdr.RasterReference);
 end
@@ -30,7 +32,7 @@ mask=fsca>0;
 t1=clock;
 
 [gldasInterp,ceresInterp]=makeInterp(gldas_filelist,...
-        gldas_topo,topo,mask,ceres,tz,LDASOnlyFlag);
+gldas_topo,topo,mask,ceres,tz,LDASOnlyFlag);
 t2=clock;
 disp(['-->> prepped forcings in ' num2str(round(etime(t2,t1))) ...
     ' seconds for ',dateS])

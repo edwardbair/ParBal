@@ -37,6 +37,7 @@ parfor i=1:length(vars)
         end
     end
 end
+clear GLDAS
 for i=1:length(vars)
     gldas.(vars{i})=gldastmp{i};
 end
