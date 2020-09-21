@@ -1,4 +1,4 @@
-function a=scagd_albedo(r,mu0,varargin)
+function a=spires_albedo(r,mu0,varargin)
 %statsitical fit to Jeff Dozier's SCAGD, which is  a MATLAB version of
 %the Warren and Wiscombe (1980) albedo model
 %input r - grain radius (scalar, vector, or matrix), um
