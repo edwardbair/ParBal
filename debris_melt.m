@@ -1,5 +1,5 @@
 function debris_melt(sFileDay,sFile,albedo,topofile,ldas_dir,...
-    ldas_topo_file,ceres_dir,ceres_topo_file,debris_depth_file,outdir)
+    ldas_topo_file,ceres_dir,ceres_topo_file,debris_depth_file,outdir,LDASOnlyFlag)
 %calculate debris depth across a series of images from ebalance
 %inputs
 %sFileDay - which day to run
@@ -10,8 +10,9 @@ function debris_melt(sFileDay,sFile,albedo,topofile,ldas_dir,...
 %ldas_dem_file, path to GLDAS DEM and slope/aspect file struct
 %ceres_dir, path to the CERES SW & LW
 %ceres_topofile, path to CERES DEM and slope/aspect file struct
-%debris_depth_file, mat file of debris depth, mm
+%debris_depth_file, mat file of debris depth w/ variable d in mm
 %outdir, directory to write out mat files
+%LDASOnlyFlag, if true use only LDAS (no CERES)
 %slices
 %calculate debris depth a one point in time for a directory of Tsfc images
 % build topo structure,ldas filelist,and ldas topostruct
@@ -19,7 +20,7 @@ function debris_melt(sFileDay,sFile,albedo,topofile,ldas_dir,...
 [datevalsDay,fsca,d,topo,gldas_filelist,gldas_topo,ceres,ceres_topo,tz]=...
     include_vars_debris_melt(sFileDay,sFile,debris_depth_file,...
     topofile,ldas_dir,ceres_dir,...
-    ceres_topo_file,ldas_topo_file);
+    ceres_topo_file,ldas_topo_file,LDASOnlyFlag);
 outfile=fullfile(outdir,[datestr(datevalsDay,'yyyymmdd'),'.mat']);
 % need debris cover, but no snow cover, gets transfered to albedo and
 % skipped by everything else when NaN

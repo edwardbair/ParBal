@@ -45,6 +45,10 @@ function dailyEnergy(topo,gldasInterp,gldas_topo,ceresInterp,...,
 % 'Td' - dew point temp, K * 10
 % 'ea' - vapor pressure of air, mb
 
+%adjust variables to save here---------------
+savevars={'M','direct','diffuse','Lin','presZ','albedo',...
+    'windspd','Ta','ea'};
+
 switch mode
     case 'normal'
         FOREST=varargin{1};
@@ -100,10 +104,7 @@ switch mode
         end
         
         ebalance_opt_input=FOREST;
-        if metvars_flag
-            savevars={'M','directZ','diffuseZ','LinZ','presZ','albedo',...
-                'windspd','Ta','Td','ea'};
-        else
+        if ~metvars_flag 
             savevars={'M'};
         end
     case 'debris'
@@ -254,20 +255,37 @@ for i=1:length(savevars)
 %         out.(savevars{i})=eval(savevars{i});
 %     end
 svar=savevars{i};
+
 switch svar
-    case 'albedo' 
-        m.(svar)=int8(out.(svar).*100); %0-100 pct
+    case 'albedo'
+        t=isnan(out.albedo); 
+        x=uint8(out.albedo.*100); %0-100 pct
+        x(t)=intmax('uint8');
     case 'presZ'
-        m.(svar)=int16(out.(svar).*10); %(kPa to mb)
+        t=isnan(out.presZ); 
+        x=uint8(out.presZ); %kPa
+        x(t)=intmax('uint8');
     case 'Ta'
-        m.(svar)=int16(out.(svar).*10); %deg K * 10
+        t=isnan(out.Ta); 
+        x=out.(svar)-273.15 ; %K to deg C
+        x=int8(x);
+        x(t)=intmin('int8');
     case 'windspd'
-        m.(svar)=int16(out.(svar).*10); %m/sec * 10
-    case 'ea'
-        m.(svar)=int16(out.(svar).*10); %(Pa*10)
-    case 'Td'
-        m.(svar)=int16(out.(svar).*10); %deg K * 10
-    otherwise
-        m.(svar)=int16(out.(svar));
+        t=isnan(out.windspd); 
+        x=uint8(out.windspd); %m/s
+        x(t)=intmax('int8');
+%     case 'rh' %different since rh has to be computed
+%         t=isnan(out.ea); %null values from ea (Pa)
+%         es=SaturationVaporPressure(out.Ta,'ice'); 
+%         %input in K, output in kPa
+%         rh=(out.ea./1000)./es*100;
+%         x=uint8(rh); %0-100 pct
+%         x(t)=intmax(x);      
+    otherwise % 'M','direct','diffuse','Lin'
+        x=out.(svar);
+        t=isnan(x);
+        x=uint16(x);
+        x(t)=intmax('uint16');
 end
+m.(svar)=x;
 end

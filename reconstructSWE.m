@@ -15,6 +15,8 @@ function reconstructSWE(poolsize,energy_dir,sFile,rFile,varargin)
 % reprojected to match
 % matdates - list of matdates to process. overrides default behavoir which
 % is to reconstruct all dates in sFile
+% binarymodevalue - transform fsca into binary using specified threshold. 
+% For point validation. Default is [], which does not transform fsca.
 tic;
 numArgs = 4;
 if nargin<numArgs
@@ -35,6 +37,7 @@ defaultmaxswe = [];
 defaultwatermask = [];
 defaultcanopycover = [];
 defaultmatdates = [];
+defaultbinarymodevalue = []; 
 
 p = inputParser;
 addRequired(p,'poolsize',@isnumeric);
@@ -45,6 +48,8 @@ addParameter(p,'maxswefile',defaultmaxswe,@ischar);
 addParameter(p,'watermaskfile',defaultwatermask,@ischar);
 addParameter(p,'canopycoverfile',defaultcanopycover,@ischar);
 addParameter(p,'matdates',defaultmatdates,@isnumeric);
+addParameter(p,'binarymodevalue',defaultbinarymodevalue,@isnumeric);
+
 parse(p,poolsize,energy_dir,sFile,rFile,varargin{:})
 
 %get matdates from sFile or from name-value pair
@@ -76,6 +81,7 @@ end
 gname='/Grid/MODIS_GRID_500m/';
 info=h5info(sFile,gname);
 sz=info.Datasets(1).Dataspace.Size;
+sz(3)=length(datevalsDay);
 target_hdr=GetCoordinateInfo(sFile,gname,[sz(1) sz(2)]);
 
 %read optional files
@@ -169,6 +175,9 @@ end
 
 watermask=repmat(logical(watermask),[1 1 sz(3)]);
 
+%binarymodevalue
+binarymodevalue=p.Results.binarymodevalue;
+
 %start parallel pool
 poolsize=p.Results.poolsize;
 parpool_check(poolsize);
@@ -204,6 +213,12 @@ parfor d=1:length(datevalsDay)
     cctmp(ind)=1-rawsca(ind);
     rawsca=rawsca./(1-cctmp);
     rawsca(rawsca==0)=0;
+    
+    if ~isempty(binarymodevalue)
+       bmask=rawsca>=binarymodevalue;
+       rawsca(:)=0;
+       rawsca(bmask)=1;
+    end
     
     fsca(:,:,d)=rawsca;
     %load potential melt

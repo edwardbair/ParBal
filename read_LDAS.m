@@ -142,10 +142,15 @@ elseif  gldas_flag
         double(lat(1)-lat(2)));
     %http://ldas.gsfc.nasa.gov/gldas/data/0.25deg/lis_elev.ctl
     % -179.875 0.25; 59.875 -0.25 (starting from upper left corner)
-    varid=netcdf.inqVarID(ncid,'time');
-    bd=netcdf.getAtt(ncid,varid,'begin_date');
-    bt=netcdf.getAtt(ncid,varid,'begin_time');
-    dateval=datenum([bd,bt],'yyyymmddHHMMSS');
+    %
+    %begin_date time attribute eliminated at some point in 2019
+    % now use filename for this, NB 12/18/20
+    idx=regexp(filename,'[0-9]{8}\.[0-9]{4}');
+    dateval=datenum(filename(idx:(idx+12)),'yyyymmdd.HHMM');
+%     varid=netcdf.inqVarID(ncid,'time');
+%     bd=netcdf.getAtt(ncid,varid,'begin_date');
+%     bt=netcdf.getAtt(ncid,varid,'begin_time');
+%     dateval=datenum([bd,bt],'yyyymmddHHMMSS');
     netcdf.close(ncid);
 end
 

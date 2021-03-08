@@ -40,6 +40,9 @@ FOREST.tau(deciduous_fraction > 0 & ...
     deciduous_fraction >= coniferous_fraction)=0.60;%Deciduous
 FOREST.tau(coniferous_fraction > 0 & ...
     coniferous_fraction >= deciduous_fraction)=0.30;%Coniferous
+% Set any remaining values w/ cc>0 but tau==1 to coniferous
+FOREST.tau(LandCover.cc > 0 & FOREST.tau==1)=0.30;
+
 
 %classification map
 FOREST.type.list={'deciduous','coniferous'};

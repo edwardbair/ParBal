@@ -62,7 +62,8 @@ pres_fine=pres_fine*1000;
 ht_wind_obs=single(2); %m
 xkappa=single(0.41);% von Karmans constant
 gravity=single(9.8); %m/s
-z_0d=single(0.05); %debris roughness length, m, Lejeune and other, 2013
+% z_0d=single(0.05); %debris roughness length, m, Lejeune and others, 2013
+z_0d=single(0.016); %debris roughness length, m, Brock et and others, 2010
 z_0s=single(0.0005); %snow roughness length, m
 Kd=single(1.0); %W/(m deg K), debris avg from Schauwecker and other, 2015
 %air vapor pressure
