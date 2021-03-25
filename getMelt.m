@@ -7,6 +7,7 @@ function [x,hdr,h5mdates]=getMelt(h5file,meltvariable,varargin)
 % 'swe' - daily reconstructed swe, mm
 % 'melt' - daily melt, mm
 % 'maxswedates' - date of max swe
+% 'DebrisMelt' - daily under debris ice melt, mm
 % optional 3rd input is scalar or vector of matdates to read, if not
 % supplied, whole cube is read
 %output:

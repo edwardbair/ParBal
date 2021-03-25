@@ -16,7 +16,6 @@ if ~isempty(varargin)
     debris_flag=true;
 end
 parfor i=1:length(yr)
-   % matdates=datenum([yr(i) 1 1]):datenum([yr(i) 12 31]);
     d=dir(fullfile(fsca_dir,sprintf('*_%i.h5',yr(i))));
     [fsca,matdates,hdr]=GetEndmember(fullfile(d.folder,d.name),'snow');
     for j=1:length(matdates)
