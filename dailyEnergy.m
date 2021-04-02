@@ -48,7 +48,8 @@ function dailyEnergy(topo,gldasInterp,gldas_topo,ceresInterp,...,
 %adjust variables to save here---------------
 savevars={'M','direct','diffuse','Lin','presZ','albedo',...
     'windspd','Ta','ea'};
-
+%default number of times during the day to process (24)
+num_times=length(gldasInterp.datevalsUTC);
 switch mode
     case 'normal'
         FOREST=varargin{1};
@@ -113,6 +114,19 @@ switch mode
         d=varargin{2};
         ebalance_opt_input=d;
         savevars={'G'};
+        %daily averages
+        num_times=1;
+        fn=fieldnames(gldasInterp);
+        for i=1:length(fn)
+            fni=fn{i};
+            switch fni
+                case {'datevalsUTC' , 'datevalsLocal'}
+                    %1d mean
+                    gldasInterp.(fni)=mean(gldasInterp.(fni),'omitnan');
+                otherwise %3d mean
+                    gldasInterp.(fni)=mean(gldasInterp.(fni),3,'omitnan');
+            end
+        end
     case 'debris depth'
         %albedo
         sw_opt_input=varargin{1};
@@ -127,7 +141,7 @@ if isempty(ceresInterp)
     LDASOnlyFlag=true;
 end
 
-num_times=length(gldasInterp.datevalsUTC);
+
 sizes=[topo.hdr.RasterReference.RasterSize num_times];
 %determine whether NLDAS or GLDAS based on windfields
 gldasflag=false;
@@ -219,9 +233,6 @@ for h=1:num_times
         fprintf('E-balance solved for %s (%s UTC)\n',Localstring,UTCstring);    
 end
 
-%use daily average surface temperatures to compute G for debris melt
-% MATLABdates=gldasInterp.datevalsLocal;
-
 switch mode
 case 'normal'
     %sum for the day to reduce storage
@@ -231,18 +242,16 @@ case 'normal'
     x=reshape(x,size(out.M));
     x(x<0)=0;
     out.M=sum(x,3);
-case 'debris'
+%case 'debris'
 %     out.Tsfc=Tsfc; 
     %Assume Kd = 1 W/(m*K) and 1/2 of debris depth to 0 deg debris temp
-    out.G=(out.Tsfc-273.15)./(0.5.*d);
+%     out.G=(out.Tsfc-273.15)./(0.5*d);
 case 'debris depth'
 %     out.Tsfc=Tsfc;
     out.d=out.opt_output; %depth in m
-    out.G=(out.Tsfc-273.15)./(0.5.*out.d);
+    %switched to daily avg
+%     out.G=(out.Tsfc-273.15)./out.d;
     out.d=out.d*1000; %convert to mm
-    %for both of these, G should be summed and multipled by 0.0108 mm / W
-    %m^-2 hr or averaged and multipled by 0.2592 mm/ W m^-2 to damp out
-    %diurnal Tsfc swings
 end
     
 %save

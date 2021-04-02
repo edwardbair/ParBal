@@ -4,6 +4,7 @@ function addDebrisMelt(ReconCubeOutDir,DebrisMeltOutDir)
 %ReconCubeOutDir - where the recon cubes live
 %DebrisMeltOutDir - where the daily debris melt mat files live
 d=dir(fullfile(ReconCubeOutDir,'*.h5'));
+mf=0.2592; % mm W m^-2 day^-1
 parfor i=1:length(d)
     rname=fullfile(d(i).folder,d(i).name);
     matdates=h5readatt(rname,'/','MATLABdates')
@@ -14,14 +15,12 @@ parfor i=1:length(d)
         if j==1 %preallocate
             DebrisMelt=zeros([size(M.G,1) size(M.G,2) length(matdates)],'single');
         end
-        Gmelt=M.G;
-        C=class(Gmelt);
-        Gmelt=single(Gmelt);
+        G=M.G;
+        C=class(G);
+        G=single(G);
         FillValue=intmax(C);
-        Gmelt(Gmelt==FillValue)=NaN;
-        %sum of hourly melt * hourly melt factor
-        Gmelt=sum(Gmelt,3).*0.0108;
-        DebrisMelt(:,:,j)=Gmelt;
+        G(G==FillValue)=NaN;
+        DebrisMelt(:,:,j)=G*mf;
     end
     fprintf('finished reading debris melt for %s\n',rname);
     %output variables

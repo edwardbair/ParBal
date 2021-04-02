@@ -35,7 +35,9 @@ switch mode
     otherwise
         d=opt_arg;
         %Schauwecker et al 2016
-        G=-(Kd.*(Tsfc-273.15))./(0.5.*d);
+%         G=-(Kd.*(Tsfc-273.15))./(0.5.*d);
+        % switched to daily mean, linear temp gradient assumed
+        G=-(Kd.*(Tsfc-273.15))./d; 
         Lin=LinT; % i.e. no veg correction
         Lout = -(emissivity.emd.*sig.*Tsfc.^4+(1-emissivity.ems).*Lin);
         stability = ones(size(Lin_coarse),'single'); % Rounce and McKinney 2014
