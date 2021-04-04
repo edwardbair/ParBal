@@ -20,6 +20,7 @@ parfor i=1:length(d)
         G=single(G);
         FillValue=intmax(C);
         G(G==FillValue)=NaN;
+        G(G<0)=0; %ignore negative melt values for a day
         DebrisMelt(:,:,j)=G*mf;
     end
     fprintf('finished reading debris melt for %s\n',rname);

@@ -140,6 +140,8 @@ opt_out=NaN(size(Lin_coarse),'single');
                     Tsfc=Tf; %snow temp can't be greater than freezing
                 end
                 %note Tf as input since M is + for y > Tsfc and - for y < Tsfc
+                % ie, only the residual M is correct; using Tsfc would make
+                % M=0
                 [M,Lin,LinZ,Lout,sensible,latent,G]=ebalance(Tf,Lin_coarse,...
                     Zdiff,T_fine,Vf,albedo,pres_fine,Sin,ea,sig,emissivity,Cp,xLs,...
                     rho_air,De_h,B1,B2,Kd,mode,tau,cc,ebalance_opt_arg);   

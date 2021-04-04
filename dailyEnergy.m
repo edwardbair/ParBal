@@ -116,7 +116,7 @@ switch mode
         savevars={'G'};
         %daily averages
         num_times=1;
-        fn=fieldnames(gldasInterp);
+        fn=fieldnames(gldasInterp);  
         for i=1:length(fn)
             fni=fn{i};
             switch fni
@@ -125,6 +125,17 @@ switch mode
                     gldasInterp.(fni)=mean(gldasInterp.(fni),'omitnan');
                 otherwise %3d mean
                     gldasInterp.(fni)=mean(gldasInterp.(fni),3,'omitnan');
+            end
+        end
+        fn=fieldnames(ceresInterp);
+        for i=1:length(fn)
+            fni=fn{i};
+            switch fni
+                case {'datevalsUTC' , 'datevalsLocal'}
+                    %1d mean
+                    ceresInterp.(fni)=mean(ceresInterp.(fni),'omitnan');
+                otherwise %3d mean
+                    ceresInterp.(fni)=mean(ceresInterp.(fni),3,'omitnan');
             end
         end
     case 'debris depth'
@@ -242,10 +253,10 @@ case 'normal'
     x=reshape(x,size(out.M));
     x(x<0)=0;
     out.M=sum(x,3);
-%case 'debris'
-%     out.Tsfc=Tsfc; 
-    %Assume Kd = 1 W/(m*K) and 1/2 of debris depth to 0 deg debris temp
-%     out.G=(out.Tsfc-273.15)./(0.5*d);
+case 'debris'
+    Kd=1; %W/(m*K)
+    out.G=Kd*(out.Tsfc-273.15)./d; %positive values for heat going out of debris
+    %and into ice below
 case 'debris depth'
 %     out.Tsfc=Tsfc;
     out.d=out.opt_output; %depth in m
