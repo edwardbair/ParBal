@@ -255,7 +255,7 @@ case 'normal'
     out.M=sum(x,3);
 case 'debris'
     Kd=1; %W/(m*K)
-    out.G=Kd*(out.Tsfc-273.15)./(0.5*d); %positive values for heat going out of debris
+    out.G=Kd*(out.Tsfc-273.15)./d; %positive values for heat going out of debris
     %and into ice below
 case 'debris depth'
 %     out.Tsfc=Tsfc;
