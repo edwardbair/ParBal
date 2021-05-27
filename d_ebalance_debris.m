@@ -19,7 +19,7 @@ else
     dS=-Cp*De_h*rho_air;
 end
 %analytical derivative of G
-dG = -(2*K)/d ;
+dG = -K/d ;
 %total melt derivative
 dM=dL+dS+dG;
 end

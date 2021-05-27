@@ -126,10 +126,6 @@ opt_out=NaN(size(Lin_coarse),'single');
     elseif ~ddflag %not solving for debris depth
         if ~fast_flag % solve w/ correct outputs
             x0=single(T_fine);
-%             y0=ebalance(x0,Lin_coarse,...
-%                 Zdiff,T_fine,Vf,albedo,pres_fine,Sin,ea,sig,emissivity,Cp,xLs,...
-%                 rho_air,De_h,B1,B2,Kd,mode,tau,cc,ebalance_opt_arg);
-%             if ~isnan(x0) && ~isnan(y0) && isfinite(x0) && isfinite(y0)
                 %solve for Tsfc
                 y = newton_raphson_ebalance(x0,single(1e-5),single(20),Lin_coarse,...
                     Zdiff,T_fine,Vf,albedo,pres_fine,Sin,ea,sig,emissivity,Cp,xLs,...
@@ -139,13 +135,9 @@ opt_out=NaN(size(Lin_coarse),'single');
                 if normalflag && y > Tf %don't adjust Tsfc for debris
                     Tsfc=Tf; %snow temp can't be greater than freezing
                 end
-                %note Tf as input since M is + for y > Tsfc and - for y < Tsfc
-                % ie, only the residual M is correct; using Tsfc would make
-                % M=0
-                [M,Lin,LinZ,Lout,sensible,latent,G]=ebalance(Tf,Lin_coarse,...
+                [M,Lin,LinZ,Lout,sensible,latent,G]=ebalance(Tsfc,Lin_coarse,...
                     Zdiff,T_fine,Vf,albedo,pres_fine,Sin,ea,sig,emissivity,Cp,xLs,...
                     rho_air,De_h,B1,B2,Kd,mode,tau,cc,ebalance_opt_arg);   
-%             end
         elseif fast_flag
             %just solve using Tf - only the residual M is correct
             Tsfc=Tf;
