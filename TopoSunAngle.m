@@ -59,7 +59,21 @@ end
 % sun on slopes
 mu = sunslope(mu0,phi0,topo.slope,topo.aspect);
 %mask for slopes above the horizon being illuminated
-hmask = GetHorizon(topo.topofile,phi0,mu0);
+info=h5info(topo.topofile,'/Grid/horizons');
+newH5=true; % new horizon h5 struct that doesnt have nHorizons
+for ii=1:length(info.Attributes)
+    if strcmpi(info.Attributes(ii).Name,'nHorizons')
+        newH5=false;
+    end
+end
+if newH5
+    hangles = h5getHorizon(topo.topofile,phi0);
+    hmask = hangles <= mu0 ;
+else
+%old horizon code
+    hmask = GetHorizon(topo.topofile,phi0,mu0);
+end
+
 %set slopes below horizon to 0
 mu(~hmask) = 0;
 

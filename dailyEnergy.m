@@ -253,16 +253,11 @@ case 'normal'
     x=reshape(x,size(out.M));
     x(x<0)=0;
     out.M=sum(x,3);
-% case 'debris' not necessary since G should be solved correctly
-% (fast_flage=false)
-    %     Kd=1; %W/(m*K)
-%     out.G=Kd*(out.Tsfc-273.15)./d; %positive values for heat going out of debris
-    %and into ice below
+case 'debris'
+    out.G=-out.G; % switch sign since we are interested in melt 
+    %coming into sub debris ice, not debris surface 
 case 'debris depth'
-%     out.Tsfc=Tsfc;
     out.d=out.opt_output; %depth in m
-    %switched to daily avg
-%     out.G=(out.Tsfc-273.15)./out.d;
     out.d=out.d*1000; %convert to mm
 end
     
@@ -272,9 +267,6 @@ if exist(outfile,'file')
 end
 m = matfile(outfile,'Writable',true);
 for i=1:length(savevars)
-%     if ~strcmp(savevars{i},'M')
-%         out.(savevars{i})=eval(savevars{i});
-%     end
 svar=savevars{i};
 
 switch svar

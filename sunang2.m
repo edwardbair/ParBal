@@ -59,7 +59,7 @@ end
 [arclen, phi0] = distance(lat, lon, declin, omega);
 mu0 = cosd(arclen);
 % translate so that 0 is south, positive counter-clockwise
-phi0 = 180-phi0;
+phi0 = 180-phi0; 
 
 %store unrefracted mu0 for top of atmosphere mu0
 mu0_unrefracted=mu0;

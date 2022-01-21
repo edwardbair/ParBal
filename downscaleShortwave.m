@@ -1,4 +1,3 @@
-
 function [F,B,FinZ,BinZ,albedo,presZ,T_Z] = downscaleShortwave(...
     datevalUTC,pres,T,Gin,gldas_topo,topo,mode,opt_input)
 % Calculates incoming shortwave radiation for debris cover

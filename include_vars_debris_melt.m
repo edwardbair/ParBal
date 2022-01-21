@@ -6,7 +6,7 @@ topofile,ldas_dir,ceres_dir,ceres_topofile,ldas_topofile,LDASOnlyFlag)
 %sca file
 datevals=h5readatt(sFile,'/','MATLABdates');
 datevalsDay=datevals(sFileDay);
-fsca=GetEndmember(sFile,'snow',datevalsDay);
+[fsca,~,fsca_hdr]=GetEndmember(sFile,'snow',datevalsDay);
 
 %debris_depth
 m=matfile(debris_depth_file);
@@ -19,6 +19,11 @@ topo.dem=GetTopography(topofile,'elevation');
 topo.view=GetTopography(topofile,'viewfactor');
 topo.topofile=topofile;
 
+%reproject fsca if it doesn't match topo
+if any(topo.hdr.RefMatrix~=fsca_hdr.RefMatrix,'all') 
+    fsca=rasterReprojection(fsca,fsca_hdr.RefMatrix,fsca_hdr.ProjectionStructure,...
+        topo.hdr.ProjectionStructure,'rasterref',topo.hdr.RasterReference);
+end
 
 %use midpoints
 x=mean(topo.hdr.RasterReference.XWorldLimits);

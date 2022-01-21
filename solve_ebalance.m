@@ -62,10 +62,12 @@ pres_fine=pres_fine*1000;
 ht_wind_obs=single(2); %m
 xkappa=single(0.41);% von Karmans constant
 gravity=single(9.8); %m/s
-% z_0d=single(0.05); %debris roughness length, m, Lejeune and others, 2013
-z_0d=single(0.016); %debris roughness length, m, Brock et and others, 2010
+z_0d=single(0.06); %debris roughness length, m, Lejeune and others, 2013
+%z_0d=single(0.016); %debris roughness length, m, Brock et and others, 2010
 z_0s=single(0.0005); %snow roughness length, m
-Kd=single(1.0); %W/(m deg K), debris avg from Schauwecker and other, 2015
+% Kd=single(1.0); %W/(m deg K), debris avg from Schauwecker and other, 2015
+Kd=single(0.7); %W/(m deg K), debris avg from Schauwecker and other, 2015
+
 %air vapor pressure
 [Td,ea]=downscaleDewpoint(pres_coarse,q_coarse,T_coarse,T_fine);
 %convert kPa to Pa
@@ -115,6 +117,8 @@ C1=5.3.*9.4.*(xkappa./(log(ht_wind_obs./z_0))).^2.*...
 C2=gravity.*ht_wind_obs./(T_fine.*windspd.^2);
 B1=9.4.*C2;
 B2=C1.*sqrt(C2);
+%fix debris cover below
+d_thresh=0.06;
 %place holder
 opt_out=NaN(size(Lin_coarse),'single');
 
@@ -126,18 +130,31 @@ opt_out=NaN(size(Lin_coarse),'single');
     elseif ~ddflag %not solving for debris depth
         if ~fast_flag % solve w/ correct outputs
             x0=single(T_fine);
+                if (d < d_thresh) && ~normalflag %if thin debris
+                    %fix at d_thresh
+                    ebalance_opt_arg=d_thresh; 
+%                     mode='normal';
+%                     albedo=0.4; %Hock 2005, clean ice albedo
+                end
                 %solve for Tsfc
                 y = newton_raphson_ebalance(x0,single(1e-5),single(20),Lin_coarse,...
                     Zdiff,T_fine,Vf,albedo,pres_fine,Sin,ea,sig,emissivity,Cp,xLs,...
                     rho_air,De_h,B1,B2,Kd,mode,tau,cc,ebalance_opt_arg);
                 %use that Tsfc to calculate ebalance
                 Tsfc = y;
-                if normalflag && y > Tf %don't adjust Tsfc for debris
-                    Tsfc=Tf; %snow temp can't be greater than freezing
+                %if dealing with snow/ice AND the
+                %solution is above freezing
+                if normalflag && (y > Tf)
+%                 if (normalflag || (d < d_thresh)) && (y > Tf)
+                    Tsfc=Tf; %snow/ice temp can't be greater than freezing
+                    % so set to freezing & assume excess energy goes into melting
                 end
                 [M,Lin,LinZ,Lout,sensible,latent,G]=ebalance(Tsfc,Lin_coarse,...
                     Zdiff,T_fine,Vf,albedo,pres_fine,Sin,ea,sig,emissivity,Cp,xLs,...
-                    rho_air,De_h,B1,B2,Kd,mode,tau,cc,ebalance_opt_arg);   
+                    rho_air,De_h,B1,B2,Kd,mode,tau,cc,ebalance_opt_arg);
+%                 if d < d_thresh
+%                    G=-M; % set conduction to residual melt
+%                 end
         elseif fast_flag
             %just solve using Tf - only the residual M is correct
             Tsfc=Tf;

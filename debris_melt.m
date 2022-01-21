@@ -24,6 +24,7 @@ function debris_melt(sFileDay,sFile,albedo,topofile,ldas_dir,...
 outfile=fullfile(outdir,[datestr(datevalsDay,'yyyymmdd'),'.mat']);
 % need debris cover, but no snow cover, gets transfered to albedo and
 % skipped by everything else when NaN
+
 dmask=d>0 & fsca == 0;
 albedo=single(dmask).*albedo;
 albedo(albedo==0)=NaN;
