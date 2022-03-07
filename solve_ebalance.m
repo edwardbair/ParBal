@@ -130,7 +130,7 @@ opt_out=NaN(size(Lin_coarse),'single');
     elseif ~ddflag %not solving for debris depth
         if ~fast_flag % solve w/ correct outputs
             x0=single(T_fine);
-                if (d < d_thresh) && ~normalflag %if thin debris
+                if  ~normalflag && (d < d_thresh) %if thin debris
                     %fix at d_thresh
                     ebalance_opt_arg=d_thresh; 
 %                     mode='normal';
