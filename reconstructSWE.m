@@ -15,7 +15,7 @@ function reconstructSWE(poolsize,energy_dir,sFile,rFile,varargin)
 % reprojected to match
 % matdates - list of matdates to process. overrides default behavoir which
 % is to reconstruct all dates in sFile
-% binarymodevalue - transform fsca into binary using specified threshold. 
+% binarymodevalue - transform fsca into binary using specified threshold.
 % For point validation. Default is [], which does not transform fsca.
 tic;
 numArgs = 4;
@@ -37,7 +37,7 @@ defaultmaxswe = [];
 defaultwatermask = [];
 defaultcanopycover = [];
 defaultmatdates = [];
-defaultbinarymodevalue = []; 
+defaultbinarymodevalue = [];
 
 p = inputParser;
 addRequired(p,'poolsize',@isnumeric);
@@ -74,7 +74,7 @@ rFile = fullfile(recon_dir,[fname,ext]);
 
 if isdeployed
     h = StartAzureDiary(mfilename,diaryFolder,...
-        datestr(datevalsDay(1),'yyyymmdd'),'-',datestr(datevalsDay(end))); 
+        datestr(datevalsDay(1),'yyyymmdd'),'-',datestr(datevalsDay(end)));
 end
 
 %set default target hdr from fsca, change if optional inputs don't match
@@ -92,14 +92,14 @@ if ~isempty(canopycoverfile)
     [~,~,ext]=fileparts(canopycoverfile);
     switch ext
         case '.mat'
-                m=load(canopycoverfile);
-                if isempty(m)
-                    error('could not read canopycoverfile %s',...
-                        canopycoverfile);
-                else
-                    cc=m.cc;
-                    target_hdr=m.hdr;
-                end
+            m=load(canopycoverfile);
+            if isempty(m)
+                error('could not read canopycoverfile %s',...
+                    canopycoverfile);
+            else
+                cc=m.cc;
+                target_hdr=m.hdr;
+            end
         case '.h5'
             try
                 cc=h5read(canopycoverfile,'/Grid/cc');
@@ -111,9 +111,11 @@ if ~isempty(canopycoverfile)
     end
 end
 
+
 %max swe date mask
 maxswefile=p.Results.maxswefile;
 if ~isempty(maxswefile)
+
     [~,~,ext]=fileparts(maxswefile);
     switch ext
         case '.mat'
@@ -123,7 +125,7 @@ if ~isempty(maxswefile)
             end
             sweR.maxswedates=m.maxswedates;
             target_hdr=m.hdr;
-            
+
         case '.h5'
             try
                 sweR.maxswedates=h5read(maxswefile,'/Grid');
@@ -135,8 +137,6 @@ if ~isempty(maxswefile)
             end
     end
 end
-
-
 
 %water mask
 watermaskfile=p.Results.watermaskfile;
@@ -164,13 +164,13 @@ end
 %now that target_hdr may have been changed from default,
 %set all optional inputs that were not supplied to that size
 if isempty(maxswefile)
-   sweR.maxswedates=ones(target_hdr.RasterReference.RasterSize); 
+    sweR.maxswedates=ones(target_hdr.RasterReference.RasterSize);
 end
 if isempty(watermaskfile)
-   watermask=zeros(target_hdr.RasterReference.RasterSize);
+    watermask=zeros(target_hdr.RasterReference.RasterSize);
 end
 if isempty(canopycoverfile)
-   cc=zeros(target_hdr.RasterReference.RasterSize); 
+    cc=zeros(target_hdr.RasterReference.RasterSize);
 end
 
 watermask=repmat(logical(watermask),[1 1 sz(3)]);
@@ -191,15 +191,16 @@ mf=1/(rho_water*Lf)*sec_hr*1000; %melt factor, mm water/(W m^-2)
 sz=target_hdr.RasterReference.RasterSize;
 sz(3)=length(datevalsDay);
 
+sweInitial=zeros(sz,'single');
 melt=zeros(sz,'single');
 fsca=zeros(sz,'single');
 
 %compute pot melt
 parfor d=1:length(datevalsDay)
-    t=datevalsDay(d);
-    fprintf('reconstructing %s\n',datestr(t));
+    td=datevalsDay(d);
+    fprintf('reconstructing %s\n',datestr(td));
     %load sca
-    [rawsca,~,hdr]=GetEndmember(sFile,'snow',t);
+    [rawsca,~,hdr]=GetEndmember(sFile,'snow',td);
     %if a canopy cover file was supplied and it has a different header,
     %reproject
     if ~(isequal(hdr.RefMatrix,target_hdr.RefMatrix) &&...
@@ -213,19 +214,25 @@ parfor d=1:length(datevalsDay)
     cctmp(ind)=1-rawsca(ind);
     rawsca=rawsca./(1-cctmp);
     rawsca(rawsca==0)=0;
-    
+
     if ~isempty(binarymodevalue)
-       bmask=rawsca>=binarymodevalue;
-       rawsca(:)=0;
-       rawsca(bmask)=1;
+        bmask=rawsca>=binarymodevalue;
+        rawsca(:)=0;
+        rawsca(bmask)=1;
     end
-    
+
     fsca(:,:,d)=rawsca;
     %load potential melt
-    fname=fullfile(energy_dir,[datestr(t,'yyyymmdd'),'.mat']);
+    fname=fullfile(energy_dir,[datestr(td,'yyyymmdd'),'.mat']);
     %     [M,MATLABdates]=parload(fname,'M','MATLABdates');
     m=matfile(fname);
     M=m.M;
+    %swe estimate from ldas
+    swe_l=m.SWE;
+    cl = class(swe_l);
+    swe_l = single(swe_l);
+    swe_l(swe_l==intmax(cl))=NaN;
+    sweInitial(:,:,d)=mean(swe_l,3,'omitnan'); % take max daily swe
     melt(:,:,d)=single(M).*mf.*rawsca;
 end
 %% sum SWE
@@ -235,35 +242,37 @@ vecsize=rsize(1)*rsize(2);
 % convert to uint16
 sweR.melt=uint16(melt);
 sweR.melt(watermask)=0;
-
-% [sca,~,hdr]=GetEndmember(sFile,'snow_fraction',datevalsDay);
-% % have to reproject again since last time was done in parfor loop
-% % if a canopy cover file was supplied and it has a different header,
-% %reproject
-% if ~isequal(hdr.RefMatrix,target_hdr.RefMatrix)
-%     sca=reprojectRaster(sca,hdr.RefMatrix,hdr.ProjectionStructure,...
-%         cc_hdr.ProjectionStructure,'rasterref',cc_hdr.RasterReference);
-%     hdr=cc_hdr;
-% end
-
+sweHybrid=zeros([length(datevalsDay) vecsize],'single');
 swe=zeros([length(datevalsDay) vecsize],'single');
-
 %reshape inputs
 %transpose is req'd because reshape operates on columns
 %rows=time, cols=image vector
 melt=reshape(sweR.melt,vecsize,length(datevalsDay))';
 fsca=reshape(fsca,vecsize,length(datevalsDay))';
 maxswedates=reshape(sweR.maxswedates,1,vecsize);
+sweInitial=reshape(sweInitial,vecsize,length(datevalsDay))';
+
+t=any(sweInitial > 0);
+if any(t)
+    AnyInitialSWE=sweInitial(:,t);
+else
+    warning('no LDAS SWE in this scene');
+end
+
+C=unique(AnyInitialSWE', 'rows');
+
+C=C';
+C(isnan(C))=0;
 
 %one pixel at every timestep
+disp('starting summing')
 parfor k=1:vecsize
     melt_vec=single(melt(:,k));
     sca_vec=fsca(:,k);
     swe_temp=zeros(length(datevalsDay),1);
+    rswe=swe_temp;
     if maxswedates(k) > 0 && any(sca_vec)
         % look for contiguous sca pds
-        % eliminate spurious zeros in SCA
-        %         sca_vec=slidefun(@max,7,sca_vec,'central');
         [start,finish] = contiguous(sca_vec);
         %get rid of contiguous pds w/ start and finish prior to peak
         %whats left are contiguous pds that start before or on peak
@@ -278,15 +287,65 @@ parfor k=1:vecsize
                 swe_temp(i)=sum(melt_vec(i:f));
             end
         end
-        %set SWE to max for all dates prior to max
-        swe_temp(1:maxswedates(k))=swe_temp(maxswedates(k));
+
+        %store rswe
+        rswe=swe_temp;
+        %find all days with recon swe (fsca>0)
+        t=swe_temp>0;
+        if nnz(t) > 0
+            snowdays=datevalsDay(t);
+            %winnow unique values to just snow cover days
+            Cxx=C(t,:);
+            %match fsca by finding curve
+            %where endpoints are both zero
+            tt=Cxx(1,:)==0 & Cxx(end,:)==0;
+            if nnz(tt)>0 %
+                %get a mean curve
+                Cxx=Cxx(:,tt);
+                Cxx=mean(Cxx,2);
+                %find the max of the mean and its location
+                [mx,midx]=max(Cxx);
+                %index to all datevals
+                Dmidx=find(snowdays(midx)==datevalsDay);
+                %scaling coef
+                c=swe_temp(Dmidx)/mx;
+                %now set all values
+                swe_temp(1:Dmidx)=c*mean(C(1:Dmidx,tt),2);
+                swe_temp(~t)=0;
+                %reoncstructed swe should always be > than hybrid
+                swe_temp(rswe<swe_temp)=rswe(rswe<swe_temp);
+                %interpolate areas w/ false negatives, & unrealistic
+                %daily increases or drops
+
+                v=swe_temp;
+                xx=1:Dmidx;
+                idxx=rswe(xx)==0;
+                xx(idxx)=[];
+                if length(xx) > 3
+                    p=0.2;
+                    w=1-v(xx)/max(v(xx));
+                    w([1 end])=1;
+                    swe_temp(xx)=csaps(datevalsDay(xx),swe_temp(xx),...
+                        p,datevalsDay(xx),w);
+                    %fix under and overshoot
+                    swe_temp(swe_temp<0 | rswe==0)=0;
+                    swe_temp(Dmidx)=v(Dmidx);
+                end
+            end
+        end
     end
-    swe(:,k)=swe_temp;
+    sweHybrid(:,k)=swe_temp;
+    swe(:,k)=rswe;
 end
+disp('done summing')
 
 % go back to images/cubes
 sweR.swe=reshape(swe',rsize(1),rsize(2),length(datevalsDay));
 sweR.swe=uint16(sweR.swe);
+
+sweR.sweHybrid=reshape(sweHybrid',rsize(1),rsize(2),length(datevalsDay));
+sweR.sweHybrid=uint16(sweR.sweHybrid);
+
 %% write out files
 %get extension
 [~,~,ext]=fileparts(rFile);
@@ -311,19 +370,20 @@ switch ext
                 ChunkSize=sz;
             end
             location=['/Grid/' fn{i}];
-            
+
             FillValue=0;
-            
+
             if isa(sweR.(fn{i}),'uint16')
                 FillValue=intmax('uint16');
                 sweR.(fn{i})(watermask)=FillValue;
             end
-            
+
             h5create(rFile,location,sz,'Deflate',deflateLevel,'ChunkSize',...
                 ChunkSize,'DataType',class(sweR.(fn{i})),'FillValue',FillValue);
             h5write(rFile,location,sweR.(fn{i}));
             %write mm for units for melt and swe
-            if strcmpi(fn{i},'melt') || strcmpi(fn{i},'swe')
+            if strcmpi(fn{i},'melt') || strcmpi(fn{i},'swe') || ...
+                    strcmpi(fn{i},'sweHybrid')
                 h5writeatt(rFile,location,'units',units);
             end
         end

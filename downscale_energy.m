@@ -1,5 +1,6 @@
 function downscale_energy(sFileDay,sFile,topofile,landcoverfile,...
-    ldas_dir,ldas_topo_file,ceres_dir,ceres_topofile,fast_flag,outdir,varargin)
+    ldas_dir,ldas_topo_file,ceres_dir,ceres_topofile,merra_dir,merra_topofile,...
+    fast_flag,outdir,varargin)
 % downscales energy for a day, specifically meant for running on individual
 % workers on Azure. Contains a parfor loop for computing snow surface
 % temperatures
@@ -13,19 +14,21 @@ function downscale_energy(sFileDay,sFile,topofile,landcoverfile,...
 % ldas_topo_file - path to h5 or mat ldas topofile
 % ceres_dir - base path to ceres files
 % ceres_topofile - path to ceres topofile (mat - h5 not implemented yet)
+% merra_dir - base path to merra files
+% merra_topofile - path to merra topofile (mat - h5 not implemented yet)
 % fast flag - true - only solve for M; false - solve for all outputs; 
 % only set for 'normal'
 % outdir - path to write out files, must already be created
 % optional - boolean flag for LDAS only mode (true) - normally assume false and run w/ LDAS
-% + CERES. If false, all other CERES inputs are ignored
+% + CERES. If true, all other CERES inputs are ignored
 % boolean flag for outputting metvars
-numarg=7;
-
-if isdeployed && nargin~=numarg
-    disp(['usage: ' mfilename ' sFileDay sFile topofile landcoverfile',...
-    'ldas_dir ldas_dem_dir outdir']);
-    return
-end
+% numarg=11;
+% 
+% if isdeployed && nargin~=numarg
+%     disp(['usage: ' mfilename ' sFileDay sFile topofile landcoverfile',...
+%     'ldas_dir ldas_dem_dir outdir']);
+%     return
+% end
 p = inputParser;
 validationFcn = @(x) isnumeric(x) || ischar(x);
 addRequired(p,'sFileDay',validationFcn)
@@ -37,23 +40,24 @@ addRequired(p,'ldas_dir',validationFcn)
 addRequired(p,'ldas_dem_file',validationFcn)
 addRequired(p,'ceres_dir',validationFcn)
 addRequired(p,'ceres_topofile',validationFcn)
+addRequired(p,'merra_dir',validationFcn)
+addRequired(p,'merra_topofile',validationFcn)
 addRequired(p,'outdir',validationFcn)
 
 LDASOnlyFlag=false;
 addOptional(p,'LDASOnlyFlag',@islogical);
-if nargin>=11
+if nargin>=13
     LDASOnlyFlag=varargin{1};
 end
 
 metvars_flag=false;
 addOptional(p,'metvars_flag',@islogical);
-if nargin==12
+if nargin==14
     metvars_flag=varargin{2};
 end
 
 parse(p,sFileDay,sFile,topofile,landcoverfile,ldas_dir,ldas_topo_file,...
-    ceres_dir,ceres_topofile,outdir,LDASOnlyFlag,metvars_flag)
-
+    ceres_dir,ceres_topofile,merra_dir,merra_topofile,outdir,LDASOnlyFlag,metvars_flag)
 
 % variables
 if ~isnumeric(p.Results.sFileDay)
@@ -62,10 +66,10 @@ end
 
 % get required variables and filenames
 [FOREST, topo, ldas, ldas_topo, dateval, sFile, ceres,...
-    ceres_topo,tz,outfile]=include_vars_melt(sFileDay,sFile,topofile,...
-    landcoverfile,ldas_dir,ldas_topo_file,ceres_dir,ceres_topofile,outdir,...
-    LDASOnlyFlag);
+    ceres_topo, merra, merra_topo, tz, outfile]=include_vars_melt(sFileDay,...
+    sFile,topofile,landcoverfile,ldas_dir,ldas_topo_file,ceres_dir,ceres_topofile,...
+    merra_dir,merra_topofile,outdir,LDASOnlyFlag);
 
 %run downscaling
-daily_melt(dateval,ldas,ceres,topo,ldas_topo,ceres_topo,...
+daily_melt(dateval,ldas,ceres,topo,ldas_topo,ceres_topo,merra,merra_topo,...
     tz,FOREST,sFile,outfile,fast_flag,LDASOnlyFlag,metvars_flag)

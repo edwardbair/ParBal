@@ -83,6 +83,8 @@ else
         [X,Y] = intrinsicToWorld(InRasterRef,XIntrinsic,YIntrinsic);
     elseif contains(class(InRasterRef),'GeographicCellsReference')
         [Y,X] = intrinsicToGeographic(InRasterRef,XIntrinsic,YIntrinsic);
+    elseif contains(class(InRasterRef),'GeographicPostings')
+        [Y,X] = intrinsicToGeographic(InRasterRef,XIntrinsic,YIntrinsic);
     else
         error('InRasterRef class %s unrecognized',class(InRasterRef))
     end

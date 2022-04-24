@@ -1,5 +1,5 @@
-function dailyEnergy(topo,gldasInterp,gldas_topo,ceresInterp,...,
-    ceres_topo,fast_flag,metvars_flag,mode,outfile,varargin)
+function dailyEnergy(topo,gldasInterp,gldas_topo,ceresInterp,...
+    ceres_topo,merraInterp,merra_topo,fast_flag,metvars_flag,mode,outfile,varargin)
 % Calls daily radiation downscaling functions for each hour, then returns
 % energy fluxes
 
@@ -10,6 +10,8 @@ function dailyEnergy(topo,gldasInterp,gldas_topo,ceresInterp,...,
 % gldas_topo - GLDAS topographic structure
 % ceresInterp - Hourly interpolated CERES data
 % ceres_topo - ceres topo struct
+% merraInterp - Hourly interpolated MERRA
+% merra_topo - merra topo struct
 % fast flag - true - only solve for M; false - solve for all outputs; only set for 'normal'
 % metvars_flag - true - output hourly met vars, false - don't output hourly
 % metvars
@@ -47,7 +49,7 @@ function dailyEnergy(topo,gldasInterp,gldas_topo,ceresInterp,...,
 
 %adjust variables to save here---------------
 savevars={'M','direct','diffuse','Lin','presZ','albedo',...
-    'windspd','Ta','ea'};
+    'windspd','Ta','rh','SWE'};
 %default number of times during the day to process (24)
 num_times=length(gldasInterp.datevalsUTC);
 switch mode
@@ -156,6 +158,7 @@ end
 sizes=[topo.hdr.RasterReference.RasterSize num_times];
 %determine whether NLDAS or GLDAS based on windfields
 gldasflag=false;
+
 if isfield(gldasInterp,'Wind_f_inst')
     gldasflag=true;
 end
@@ -217,14 +220,17 @@ for h=1:num_times
         %create wind structure depending on whether its GLDAS (speed only)
         %or NLDAS (U&V)
         %needed for parfor loop
-    if ~gldasflag
-        windS.U=gldasInterp.UGRD(:,:,h);
-        windS.V=gldasInterp.VGRD(:,:,h);
+%     if ~gldasflag
+%         windS.U=gldasInterp.UGRD(:,:,h);
+%         windS.V=gldasInterp.VGRD(:,:,h);
+%       use MERRA for all winds
         windS.windflag=false;
-    else
-        windS.windspd=gldasInterp.Wind_f_inst(:,:,h);
-        windS.windflag=true;
-    end
+        windS.U=merraInterp.ULML(:,:,h);
+        windS.V=merraInterp.VLML(:,:,h);
+%     else
+%         windS.windspd=gldasInterp.Wind_f_inst(:,:,h);
+%         windS.windflag=true;
+%     end
     %solve the energy balance
         [out.M(:,:,h),out.Tsfc(:,:,h),out.Lin(:,:,h),out.LinZ(:,:,h),...
             out.Lout(:,:,h),out.sensible(:,:,h),out.latent(:,:,h),...
@@ -287,13 +293,17 @@ switch svar
         t=isnan(out.windspd); 
         x=uint8(out.windspd); %m/s
         x(t)=intmax('int8');
-%     case 'rh' %different since rh has to be computed
-%         t=isnan(out.ea); %null values from ea (Pa)
-%         es=SaturationVaporPressure(out.Ta,'ice'); 
-%         %input in K, output in kPa
-%         rh=(out.ea./1000)./es*100;
-%         x=uint8(rh); %0-100 pct
-%         x(t)=intmax(x);      
+    case 'rh' %different since rh has to be computed
+        t=isnan(out.ea); %null values from ea (Pa)
+        es=SaturationVaporPressure(out.Ta,'water'); 
+        %input in K, output in kPa
+        rh=(out.ea./1000)./es*100;
+        x=uint8(rh); %0-100 pct
+        x(t)=intmax('uint8');
+    case 'SWE'    %GLDAS SWE, to be used later for adj.
+        t=isnan(gldasInterp.SWE_inst);
+        x=uint16(gldasInterp.SWE_inst); %SWE, mm
+        x(t)=intmax('uint16');
     otherwise % 'M','direct','diffuse','Lin'
         x=out.(svar);
         t=isnan(x);

@@ -5,10 +5,13 @@ function coarse_topo=load_coarse_topo(...
 %topofile - h5 or matfile with coarse topograpy
 %topo_names - names of coarse topography vars
 %fine_topo - fine topo struct
+
 %output
 %coarse_topo - reprojected coarse topo w/ Zdiff
 %ReferencingMatrix - coarse Referencing Matrix
 %load topofile
+geolocated=false;
+
 [~,~,ext]=fileparts(topofile);
 
 switch ext
@@ -17,10 +20,17 @@ switch ext
         if isempty(m)
             error('could not read ldas file %s',topofile);
         end
+        if isfield(m,'lat')
+            lat=m.lat;
+            lon=m.lon;
+            geolocated=true;
+        else
+            ReferencingMatrix=m.ReferencingMatrix;
+        end
         for i=1:length(topo_names)
             coarse_topo.(topo_names{i})=m.(topo_names{i});
         end
-        ReferencingMatrix=m.ReferencingMatrix;
+        
     case '.h5'
         for i=1:length(topo_names)
             loc=['/Grid/',topo_names{i}];
@@ -34,13 +44,21 @@ end
 
 % reproject coarse elevation, slope, and aspect to fine scale
 for i=1:length(topo_names)
+    if geolocated
+    coarse_topo.(topo_names{i})=reprojectRaster(coarse_topo.(topo_names{i}),...
+        [],[],fine_topo.hdr.ProjectionStructure,'lat',lat,'lon',lon,...
+    'rasterref',fine_topo.hdr.RasterReference);
+    else
     coarse_topo.(topo_names{i})=reprojectRaster(coarse_topo.(topo_names{i}),...
         ReferencingMatrix,[],fine_topo.hdr.ProjectionStructure,...
     'rasterref',fine_topo.hdr.RasterReference);
+    end
 end
 
-% Difference between fine and reprojected NLDAS DEM
+% Difference between fine and reprojected  DEM
 coarse_topo.Zdiff=fine_topo.dem-coarse_topo.Z;
-coarse_topo=rmfield(coarse_topo,'Z');
-coarse_topo.CoarseRefMatrix=ReferencingMatrix;
+% coarse_topo=rmfield(coarse_topo,'Z');
+if ~geolocated
+    coarse_topo.CoarseRefMatrix=ReferencingMatrix;
+end
 end

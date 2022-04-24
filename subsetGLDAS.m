@@ -18,9 +18,15 @@ gldastmp=cell(length(vars),1);
 mask=repmat(mask,[1 1 len]);
 % for i=1:length(vars);
 parfor i=1:length(vars)
+    switch vars{i}
+        case 'SWE_inst'
+            method='nearest'; %use nearest for GLDAS SWE
+        otherwise
+            method='linear'; %linear for all else
+    end
     t=reprojectRaster(GLDAS.(vars{i}),coarseRefMat,...
         [],fine_dem_hdr.ProjectionStructure,'rasterref',...
-        fine_dem_hdr.RasterReference,'method','linear');
+        fine_dem_hdr.RasterReference,'method',method);
     gldastmp{i}=single(t);
     %dont bother interpolating for NaNs in areas w/o snow
     ind = mask > 0 & isnan(t);
@@ -29,7 +35,8 @@ parfor i=1:length(vars)
             V=double(gldastmp{i}(:,:,j));
             [X,Y]=meshgrid(1:size(V,1),1:size(V,2));
             ind2=ind(:,:,j);
-            f=scatteredInterpolant(X(~ind2),Y(~ind2),V(~ind2));
+            ind3=~isnan(V);
+            f=scatteredInterpolant(X(ind3),Y(ind3),V(ind3),'linear','nearest');
             V(ind2)=f(X(ind2),Y(ind2));
             gldastmp{i}(:,:,j)=single(V);
 %             x=interp2(X(~ind2),Y(~ind2),V(~ind2),X(ind2),Y(ind2));

@@ -1,24 +1,26 @@
-function [ldasInterp,ceresInterp]=makeInterp(ldas_filelist,ldas_topo,topo,mask,ceres,tz,...
-    varargin)
+function [ldasInterp,ceresInterp,merraInterp]=makeInterp(ldas_filelist,ldas_topo,...
+    topo,mask,ceres,merra,tz,varargin)
 %make interpolated gldas and ceres data
 %input:
 %ldas_filelist - list of ldas files to load
 %ldas_topo - ldas topo struct
 %topo - finescale topo struct
 %mask - mask for place to skip interpolation, e.g. from fsca or debris
-%ceres - struct w/ ceres filelist
+%ceres - struct w/ ceres location
+%merra - struct w/ merra location
 %tz - timezone
 %LDASOnlyFlag - use LDAS only inputs, optional
 %ouput
 % LDASInterp - interp. LDAS struc
 % ceresInterp - interp CERES struc (empty if LDASOnlyFlag)
+% merraInterp - interp MERRA struct (empty if LDASOnlyFlag)
 % reproject and interpolate ldas for specified datevals
 LDASOnlyFlag=false;
 gldas_flag=false;
 if contains(ldas_filelist.filenames{1},'GLDAS')
     gldas_flag=true;
 end
-if nargin==7
+if nargin==9
     LDASOnlyFlag=varargin{1};
 end
 ldas_stacked = stackGLDAS(ldas_filelist);
@@ -53,7 +55,22 @@ if ~LDASOnlyFlag
     %still need to interpolate to shift to 00:00-23:00
     ceresInterp = interpGLDAS2hourly(ceres_subset,ceres_varnames);
     clear ceres_subset
+    %now for merra hourly, also 00:30, 01:30, ... 
+    [merra_stacked,merra_hdr,merra_varnames]=read_merra(merra.merra_dir,...
+        getCERESdatevalsUTC,tz,merra.var);
+    try
+    merra_subset = subsetGLDAS(merra_stacked,merra_hdr.RefMatrix,...
+        topo.hdr,merra_varnames,mask,true);
+    catch
+        error('problem w/ %s\n',datestr(floor(getCERESdatevalsUTC(1))));
+    end
+    clear merra_stacked
+    %still need to interpolate to shift to 00:00-23:00
+    merraInterp = interpGLDAS2hourly(merra_subset,merra_varnames);
+    clear merra_subset    
 else
     ceresInterp=[];
+    merraInterp=[];
 end
+
 end
