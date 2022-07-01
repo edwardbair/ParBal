@@ -30,6 +30,7 @@ parfor i=1:length(vars)
     gldastmp{i}=single(t);
     %dont bother interpolating for NaNs in areas w/o snow
     ind = mask > 0 & isnan(t);
+
     if inpaint && any(ind(:))
         for j=1:len
             V=double(gldastmp{i}(:,:,j));

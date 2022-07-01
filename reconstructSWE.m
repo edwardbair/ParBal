@@ -18,19 +18,6 @@ function reconstructSWE(poolsize,energy_dir,sFile,rFile,varargin)
 % binarymodevalue - transform fsca into binary using specified threshold.
 % For point validation. Default is [], which does not transform fsca.
 tic;
-numArgs = 4;
-if nargin<numArgs
-    disp(['minimum ' num2str(numArgs) '(>' num2str(nargin) ') arguments required'])
-    if isdeployed
-        disp(['usage: ' mfilename ' poolsize energy_dir sFile outdir [optional name/value pairs: ',...
-            '[maxswefile maxswefilename],[watermaskfile watermaskfilename canopycoverfile matdates matdatesvector]']);
-    else
-        disp(['usage: ' mfilename '(poolsize,energy_dir,sFile,outdir [optional name/value pairs: ',...
-            '[''maxswefile'' maxswefilename],[''watermaskfile'' watermaskfilename canopycoverfile matdates matdatesvector])']);
-    end
-    disp('see documentation about optional arguments')
-    return
-end
 
 % parse inputs
 defaultmaxswe = [];
@@ -85,7 +72,7 @@ sz(3)=length(datevalsDay);
 target_hdr=GetCoordinateInfo(sFile,gname,[sz(1) sz(2)]);
 
 %read optional files
-%canopycoverfile
+
 canopycoverfile=p.Results.canopycoverfile;
 
 if ~isempty(canopycoverfile)
@@ -110,7 +97,6 @@ if ~isempty(canopycoverfile)
             end
     end
 end
-
 
 %max swe date mask
 maxswefile=p.Results.maxswefile;
@@ -167,7 +153,9 @@ if isempty(maxswefile)
     sweR.maxswedates=ones(target_hdr.RasterReference.RasterSize);
 end
 if isempty(watermaskfile)
-    watermask=zeros(target_hdr.RasterReference.RasterSize);
+    %watermask=zeros(target_hdr.RasterReference.RasterSize);
+    xx=GetEndmember(sFile,'snow',datevalsDay(1));
+    watermask=isnan(xx);
 end
 if isempty(canopycoverfile)
     cc=zeros(target_hdr.RasterReference.RasterSize);
@@ -224,10 +212,30 @@ parfor d=1:length(datevalsDay)
     fsca(:,:,d)=rawsca;
     %load potential melt
     fname=fullfile(energy_dir,[datestr(td,'yyyymmdd'),'.mat']);
-    %     [M,MATLABdates]=parload(fname,'M','MATLABdates');
-    m=matfile(fname);
+    m=[];
+
+    if exist(fname,'file')==2
+        m=matfile(fname);
+    else
+        error('%s doesnt exist',fname)
+    end
+    
+    
+    try 
+        m.M;
+    catch
+        error('M doesnt exist in %s',fname)
+    end
+
+    try 
+        m.SWE;
+    catch
+        error('SWE doesnt exist in %s',fname)
+    end
+    
     M=m.M;
     %swe estimate from ldas
+   
     swe_l=m.SWE;
     cl = class(swe_l);
     swe_l = single(swe_l);
@@ -347,8 +355,12 @@ sweR.sweHybrid=reshape(sweHybrid',rsize(1),rsize(2),length(datevalsDay));
 sweR.sweHybrid=uint16(sweR.sweHybrid);
 
 %% write out files
-%get extension
-[~,~,ext]=fileparts(rFile);
+
+%store orignal location
+rFile0=rFile;
+%temp location
+[~,rFileName,ext]=fileparts(rFile);
+rFile=fullfile(tempdir,rFileName);
 
 fn=fieldnames(sweR);
 units='mm';
@@ -394,5 +406,7 @@ switch ext
             strjoin(cellstr(datestr(datevalsDay,'yyyymmdd'))));
         h5writeatt(rFile,'/Grid','ReferencingMatrix',target_hdr.RefMatrix);
 end
+%move from temp to final location
+movefile(rFile,rFile0);
 t=toc;
 fprintf('SWE reconstructed and saved in %3.1f min\n',t/60);

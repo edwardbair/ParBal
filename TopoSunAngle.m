@@ -1,10 +1,8 @@
-function T  = TopoSunAngle(matdate,topo,press,temp)
+function T  = TopoSunAngle(matdate,topo)
 %computes sun angles over a topographic grid
 %INPUT -
 %   matdate - MATLAB date in UTC over which to do the computation
 %   topo -  topo structure including filename for slope,aspect,& horizon in hd5
-%   Press - grid of pressures or scalar (Pa)
-%   Temp - grid of temperatures or scalar (K)
 %
 %OUTPUT -
 %   T - topographic structure with elements over the grid
@@ -53,9 +51,11 @@ switch S.gridtype
         error('S.gridtype unknown')
 end
 
-% sun angles w/ amospheric refraction
+% sun angles w/ atmospheric refraction
+% [mu0,mu0_unrefracted, phi0, airmass] = sunang2(lat,lon,T.Declination,T.SolarLongitude,...
+%         true,press/1000,temp);
 [mu0,mu0_unrefracted, phi0, airmass] = sunang2(lat,lon,T.Declination,T.SolarLongitude,...
-        true,press/1000,temp);
+        true);
 % sun on slopes
 mu = sunslope(mu0,phi0,topo.slope,topo.aspect);
 %mask for slopes above the horizon being illuminated
@@ -67,8 +67,12 @@ for ii=1:length(info.Attributes)
     end
 end
 if newH5
-    hangles = h5getHorizon(topo.topofile,phi0);
-    hmask = hangles <= mu0 ;
+    if any(~isnan(phi0),'all')
+        hangles = h5getHorizon(topo.topofile,phi0);
+        hmask = hangles <= mu0 ;
+    else
+        hmask = false(size(phi0));
+    end
 else
 %old horizon code
     hmask = GetHorizon(topo.topofile,phi0,mu0);

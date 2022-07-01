@@ -54,5 +54,5 @@ for i=1:2 %two veg types
     end
 end
 
-Z=rasterReprojection(Z,R.RefMatrix_500m,mstruct,CC.hdr.ProjectionStructure,...
+Z=reprojectRaster(Z,R.RefMatrix_500m,mstruct,CC.hdr.ProjectionStructure,...
     'rasterref',CC.hdr.RasterReference,'method','nearest');

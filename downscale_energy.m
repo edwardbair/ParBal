@@ -29,6 +29,9 @@ function downscale_energy(sFileDay,sFile,topofile,landcoverfile,...
 %     'ldas_dir ldas_dem_dir outdir']);
 %     return
 % end
+
+
+
 p = inputParser;
 validationFcn = @(x) isnumeric(x) || ischar(x);
 addRequired(p,'sFileDay',validationFcn)

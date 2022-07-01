@@ -1,4 +1,3 @@
-
 function [ X, varargout ] = GetHorizon( h5file, azm, varargin )
 % angles = GetHorizon(h5file,azimuth(s))
 % [angles,hdr] = GetHorizon(h5file,azimuth(s))

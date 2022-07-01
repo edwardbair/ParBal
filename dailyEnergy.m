@@ -48,8 +48,11 @@ function dailyEnergy(topo,gldasInterp,gldas_topo,ceresInterp,...
 % 'ea' - vapor pressure of air, mb
 
 %adjust variables to save here---------------
-savevars={'M','direct','diffuse','Lin','presZ','albedo',...
-    'windspd','Ta','rh','SWE'};
+% savevars={'M','direct','diffuse','Lin','presZ','albedo',...
+%     'windspd','Ta','rh','SWE'};
+
+savevars={'M','SWE'};
+
 %default number of times during the day to process (24)
 num_times=length(gldasInterp.datevalsUTC);
 switch mode

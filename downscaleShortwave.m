@@ -36,7 +36,7 @@ lapse=-0.0065;% deg K/m
 T_Z = T + (Zdiff.*lapse);
 % Pressure at elevation adjusted with lapse and temp
 presZ = elevationPressure(pres,lapse,Zdiff,T);
-fineTSA  = TopoSunAngle(datevalUTC,topo,presZ,T_Z);
+fineTSA  = TopoSunAngle(datevalUTC,topo);
 
 switch mode
     case 'normal'
@@ -54,9 +54,11 @@ switch mode
         %albedo calculation
             albedo=NaN(size(grain_size));
             t=~isnan(grain_size);
-            albedo(t)=AlbedoLookup(double(grain_size(t)),...
-                double(fineTSA.mu0(t)),double(fineTSA.mu(t)),...
-                3,'dust',double(dust(t))*1e-6);
+            if any(t,'all')
+                albedo(t)=AlbedoLookup(double(grain_size(t)),...
+                    double(fineTSA.mu0(t)),double(fineTSA.mu(t)),...
+                    3,'dust',double(dust(t))*1e-6);
+            end
         end
     otherwise
         albedo=opt_input;
