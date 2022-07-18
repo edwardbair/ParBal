@@ -47,12 +47,6 @@ function dailyEnergy(topo,gldasInterp,gldas_topo,ceresInterp,...
 % 'Td' - dew point temp, K * 10
 % 'ea' - vapor pressure of air, mb
 
-%adjust variables to save here---------------
-% savevars={'M','direct','diffuse','Lin','presZ','albedo',...
-%     'windspd','Ta','rh','SWE'};
-
-savevars={'M','SWE'};
-
 %default number of times during the day to process (24)
 num_times=length(gldasInterp.datevalsUTC);
 switch mode
@@ -110,8 +104,12 @@ switch mode
         end
         
         ebalance_opt_input=FOREST;
-        if ~metvars_flag 
-            savevars={'M'};
+        %adjust variables to save here---------------
+        if metvars_flag
+            savevars={'M','SWE','direct','diffuse','Lin','presZ','albedo',...
+        'windspd','Ta','rh','SWE'};
+        elseif ~metvars_flag 
+            savevars={'M','SWE'};
         end
     case 'debris'
         %albedo
@@ -162,7 +160,7 @@ sizes=[topo.hdr.RasterReference.RasterSize num_times];
 %determine whether NLDAS or GLDAS based on windfields
 gldasflag=false;
 
-if isfield(gldasInterp,'Wind_f_inst')
+if isfield(gldasInterp,'Tair_f_inst')
     gldasflag=true;
 end
 out.M = zeros(sizes,'single');
@@ -303,9 +301,11 @@ switch svar
         rh=(out.ea./1000)./es*100;
         x=uint8(rh); %0-100 pct
         x(t)=intmax('uint8');
-    case 'SWE'    %GLDAS SWE, to be used later for adj.
-        t=isnan(gldasInterp.SWE_inst);
-        x=uint16(gldasInterp.SWE_inst); %SWE, mm
+    case 'SWE'    %GLDAS SWE, to be used later for adj. 
+        x=gldasInterp.SWE_inst;
+        x=mean(x,3);
+        t=isnan(x);
+        x=uint16(x); %SWE, mm
         x(t)=intmax('uint16');
     otherwise % 'M','direct','diffuse','Lin'
         x=out.(svar);

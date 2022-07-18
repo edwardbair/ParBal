@@ -21,7 +21,7 @@ function downscale_energy(sFileDay,sFile,topofile,landcoverfile,...
 % outdir - path to write out files, must already be created
 % optional - boolean flag for LDAS only mode (true) - normally assume false and run w/ LDAS
 % + CERES. If true, all other CERES inputs are ignored
-% boolean flag for outputting metvars
+% 2nd optional arg: boolean flag for outputting metvars
 % numarg=11;
 % 
 % if isdeployed && nargin~=numarg

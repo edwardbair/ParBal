@@ -69,7 +69,8 @@ end
 if newH5
     if any(~isnan(phi0),'all')
         hangles = h5getHorizon(topo.topofile,phi0);
-        hmask = hangles <= mu0 ;
+        %needed to convert to sind(hangles) for shade mask
+        hmask = sind(hangles) <= mu0 ;
     else
         hmask = false(size(phi0));
     end

@@ -219,28 +219,28 @@ parfor d=1:length(datevalsDay)
     else
         error('%s doesnt exist',fname)
     end
-    
-    
-    try 
+
+
+    try
         m.M;
     catch
         error('M doesnt exist in %s',fname)
     end
 
-    try 
+    try
         m.SWE;
     catch
         error('SWE doesnt exist in %s',fname)
     end
-    
+
     M=m.M;
     %swe estimate from ldas
-   
+
     swe_l=m.SWE;
     cl = class(swe_l);
     swe_l = single(swe_l);
     swe_l(swe_l==intmax(cl))=NaN;
-    sweInitial(:,:,d)=mean(swe_l,3,'omitnan'); % take max daily swe
+    sweInitial(:,:,d)=swe_l;
     melt(:,:,d)=single(M).*mf.*rawsca;
 end
 %% sum SWE
@@ -279,6 +279,7 @@ parfor k=1:vecsize
     sca_vec=fsca(:,k);
     swe_temp=zeros(length(datevalsDay),1);
     rswe=swe_temp;
+    %if after peak and there's fsca for this pixel
     if maxswedates(k) > 0 && any(sca_vec)
         % look for contiguous sca pds
         [start,finish] = contiguous(sca_vec);
@@ -298,33 +299,36 @@ parfor k=1:vecsize
 
         %store rswe
         rswe=swe_temp;
-        %find all days with recon swe (fsca>0)
-        t=swe_temp>0;
-        if nnz(t) > 0
-            snowdays=datevalsDay(t);
-            %winnow unique values to just snow cover days
-            Cxx=C(t,:);
-            %match fsca by finding curve
-            %where endpoints are both zero
-            tt=Cxx(1,:)==0 & Cxx(end,:)==0;
-            if nnz(tt)>0 %
-                %get a mean curve
-                Cxx=Cxx(:,tt);
-                Cxx=mean(Cxx,2);
-                %find the max of the mean and its location
-                [mx,midx]=max(Cxx);
-                %index to all datevals
-                Dmidx=find(snowdays(midx)==datevalsDay);
-                %scaling coef
-                c=swe_temp(Dmidx)/mx;
-                %now set all values
+        %find all days with fsca>0
+        t=sca_vec>0;
+        snowdays=datevalsDay(t);
+        %winnow unique values to just snow cover days
+        Cxx=C(t,:);
+        %match fsca by finding curve
+        %where endpoints are both zero
+        tt=Cxx(1,:)==0 & Cxx(end,:)==0;
+        if nnz(tt)>0 %only match days w/ snow cover
+            %get a mean curve
+            Cxx=Cxx(:,tt);
+            Cxx=mean(Cxx,2);
+            %find the max of the mean and its location
+            [mx,midx]=max(Cxx);
+            %index to all datevals
+            Dmidx=find(snowdays(midx)==datevalsDay);
+            %scaling coef
+            c=swe_temp(Dmidx)/mx;
+            if c==0 %no reconstructed swe, but fsca from both 
+                % coarse and fine models (e.g., sublimation)
+                % use coarse swe
+                swe_temp(t)=Cxx;
+            else
+                %set swe prior to peak as scaled coarse swe
                 swe_temp(1:Dmidx)=c*mean(C(1:Dmidx,tt),2);
                 swe_temp(~t)=0;
-                %reoncstructed swe should always be > than hybrid
+                %reconstructed swe should always be > than hybrid
                 swe_temp(rswe<swe_temp)=rswe(rswe<swe_temp);
                 %interpolate areas w/ false negatives, & unrealistic
                 %daily increases or drops
-
                 v=swe_temp;
                 xx=1:Dmidx;
                 idxx=rswe(xx)==0;
@@ -341,6 +345,7 @@ parfor k=1:vecsize
                 end
             end
         end
+        %end
     end
     sweHybrid(:,k)=swe_temp;
     swe(:,k)=rswe;

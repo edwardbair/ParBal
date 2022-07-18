@@ -106,7 +106,7 @@ if contains(ldas_dem_dir,'NLDAS')
     ldas.var ={'TMP','PRES','UGRD','VGRD','SPFH'};
 elseif contains(ldas_dem_dir,'GLDAS')
     ldas.var={'Tair_f_inst','Psurf_f_inst',...
-        'Wind_f_inst','Qair_f_inst','SWE_inst'};
+        'Qair_f_inst','SWE_inst'};
     %add in radiation if LDAS only
     if LDASOnlyFlag
         ldas.var=['SWdown_f_tavg','LWdown_f_tavg',ldas.var];
