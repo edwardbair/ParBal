@@ -95,7 +95,7 @@ for ii=1:size(infiles,1)
 
         melt_i=melt(:,:,i);
         sweHybrid_i=sweHybrid(:,:,i);
-        swe_i=sweHybrid(:,:,i);
+        swe_i=swe(:,:,i);
 
         matdates_i=matdates(i);
 

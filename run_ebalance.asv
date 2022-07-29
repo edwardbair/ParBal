@@ -57,8 +57,9 @@ switch mode
         Tsfc=NaN(size(d));
         %zeros for FOREST
         FOREST.cc=zeros(size(d));
-        FOREST.shd=zeros(size(d));
-        FOREST.type.num_val=zeros(size(d));
+        FOREST.
+        
+
     case 'debris depth'
         Tsfc=opt_in;
         %Tsfc as the optional input

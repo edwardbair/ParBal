@@ -141,6 +141,17 @@ switch mode
                     ceresInterp.(fni)=mean(ceresInterp.(fni),3,'omitnan');
             end
         end
+        fn=fieldnames(merraInterp);
+        for i=1:length(fn)
+            fni=fn{i};
+            switch fni
+                case {'datevalsUTC' , 'datevalsLocal'}
+                    %1d mean
+                    merraInterp.(fni)=mean(merraInterp.(fni),'omitnan');
+                otherwise %3d mean
+                    merraInterp.(fni)=mean(merraInterp.(fni),3,'omitnan');
+            end
+        end
     case 'debris depth'
         %albedo
         sw_opt_input=varargin{1};
