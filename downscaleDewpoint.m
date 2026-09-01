@@ -18,10 +18,10 @@ ea_coarse=q_coarse.*(pres_coarse*1000)/0.622;
 %assume rh constant between coarse and fine pixels, P
 rh=ea_coarse./(SaturationVaporPressure(T_coarse,'water')*1000);
 %recalc if any pix below freezing
-if any(T_coarse(:)<=0)
-    idx=T_coarse <= 0;
+if any(T_coarse(:)<=273.15)
+    idx=T_coarse <= 273.15;
     rh(idx)=ea_coarse(idx)./...
-        SaturationVaporPressure(T_coarse(idx),'ice');
+        (SaturationVaporPressure(T_coarse(idx),'ice')*1000);
 end
 
 rh(rh < 0.01) = 0.01;
